@@ -1,0 +1,4 @@
+pansou_venv/
+__pycache__/
+.gitignore
+命令.txt
