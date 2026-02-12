@@ -147,7 +147,7 @@ img {
 /* --- 主容器布局 --- */
 .container {
     width: 100%;
-    max-width: 1100px;
+    max-width: 1200px;
     /* 电脑端核心宽度，避免太宽 */
     margin: 0 auto;
     padding: 20px 16px;
