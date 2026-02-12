@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
+    
+    <style>
+        /* 确保弹窗默认有 flex 布局，但由 v-show 控制显示隐藏 */
+        .banner-qr-overlay {
+            display: flex; /* 保持居中布局 */
+        }
+        /* 当 v-show 为 false 时，Vue 会自动加上 style="display: none;"，所以这里不用担心 */
+        
+        /* 鼠标放上去显示小手，提示可以点击 */
+        .top-notice {
+            cursor: pointer;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div id="app">
+        
+        <div class="top-notice" v-if="showNotice" @click="showBanner = true">
+            <span>资源失效/没找到？扫码进群帮你解决 ></span>
+            <div class="close-btn" @click.stop="hideNotice">
+                <i class="ri-close-line"></i>
+            </div>
+        </div>
+
+        <header class="main-header">
+            <div class="header-inner">
+                <div class="logo-area">
+                    <i class="ri-cloud-fill logo-icon"></i>
+                    <span>基德资源搜索站</span>
+                </div>
+                <nav class="desktop-nav">
+                    <a href="#" class="active">首页</a>
+                    <a href="#">每日更新</a>
+                    <a href="#">短剧专区</a>
+                    <a href="#">热门榜单</a>
+                    <a href="#">求片通道</a>
+                </nav>
+                <div class="mobile-menu-btn">
+                    <i class="ri-menu-line"></i>
+                </div>
+            </div>
+        </header>
+
+        <main class="container">
+            
+            <div class="banner-qr-overlay" v-show="showBanner" style="display: none;">
+                <div class="banner-qr-box">
+                    <div class="banner-qr-header">
+                        <button class="banner-qr-close" @click="showBanner = false">×</button>
+                        <h3>扫码进群</h3>
+                        <p>失效补链 · 资源求助 · 点映通知</p>
+                    </div>
+                    <div class="banner-qr-body">
+                        <div class="banner-qr-img-wrap">
+                            <img src="/uploads/f574b05f.png" alt="群二维码">
+                        </div>
+                        <p class="banner-qr-desc">资源失效补链 · 找不到的帮你找</p>
+                        <p class="banner-qr-tip">截图保存 → 微信扫一扫 → 相册识别</p>
+                    </div>
+                    <div class="banner-qr-footer">
+                        <button class="banner-qr-btn" @click="showBanner = false">我知道了</button>
+                    </div>
+                </div>
+            </div>
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <div class="fab-btn" @click="showBanner = true">
+            <i class="ri-qr-code-line" style="font-size: 24px;"></i>
+            <p>扫码进群</p>
+        </div>
+
+        <div class="mobile-tab-bar">
+            <div class="tab-item active"><i class="ri-home-5-line"></i><span>首页</span></div>
+            <div class="tab-item"><i class="ri-calendar-event-line"></i><span>每日更新</span></div>
+            <div class="tab-item"><i class="ri-movie-line"></i><span>短剧</span></div>
+            <div class="tab-item"><i class="ri-search-line"></i><span>全网搜</span></div>
+        </div>
+
+    </div>
+    
+    {% block scripts %}{% endblock %}
+    
+    <script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+    <script>
+        var app = new Vue({
+            el: "#app",
+            // 核心修改：修改了下面这行注释，去掉了大括号，防止报错
+            // 防止和 Python Flask 模板语法冲突
+            delimiters: ['${', '}'], 
+            data() {
+                return {
+                    // 控制弹窗显示（默认 false 不显示）
+                    showBanner: false,
+                    // 控制顶部通知条显示（默认 true 显示）
+                    showNotice: true
+                };
+            },
+            methods: {
+                // 关闭顶部通知条的方法
+                hideNotice() {
+                    this.showNotice = false;
+                }
+            },
+            mounted() {
+                console.log("Vue is running...");
+            },
+        });
+    </script>
+</body>
+
+</html>

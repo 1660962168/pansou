@@ -1,0 +1,113 @@
+.banner-qr-overlay {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: #00000080;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+.banner-qr-box {
+    background: #fff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 340px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px #0000004d;
+    animation: bannerQrIn .3s ease;
+}
+.banner-qr-header {
+    background: #2563eb;
+    padding: 20px;
+    text-align: center;
+    color: #fff;
+    position: relative;
+}
+.banner-qr-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 26px;
+    height: 26px;
+    background: #fff3;
+    border: none;
+    border-radius: 50%;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.banner-qr-header h3 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 4px;
+}
+.banner-qr-header p {
+    font-size: 13px;
+    opacity: .9;
+    margin: 0;
+}
+.banner-qr-body {
+    padding: 24px 20px;
+    text-align: center;
+}
+.banner-qr-img-wrap {
+    width: 180px;
+    height: 180px;
+    margin: 0 auto 16px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+.banner-qr-desc {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 4px;
+}
+.banner-qr-body {
+    padding: 24px 20px;
+    text-align: center;
+}
+.banner-qr-footer {
+    padding: 0 20px 20px;
+}
+.banner-qr-btn {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+.banner-qr-tip {
+    font-size: 12px;
+    color: #999;
+    margin: 0;
+}
+
+@keyframes bannerQrIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

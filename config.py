@@ -1,12 +1,6 @@
-SECRET_KEY = 'your_secret_key'
-#数据库配置信息
-HOSTNAME = '127.0.0.1'
-PORT = '3306'
-DATABASE = 'work_situation'
-USERNAME = 'root'
-PASSWORD = '000000'
-DB_URI = 'mysql+pymysql://{}:{}@{}:{}/{}?charset=utf8'.format(USERNAME, PASSWORD, HOSTNAME, PORT, DATABASE)
-SQLALCHEMY_DATABASE_URI = DB_URI
+import os
+
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+SECRET_KEY = 'jxmvaJRa6EtGAhi5Vbmf-mF2s9OvQa-gVIMOZmWhJP8'
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(BASE_DIR, 'pansuo.db')
 SQLALCHEMY_TRACK_MODIFICATIONS = True
-
-

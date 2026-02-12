@@ -1,0 +1,150 @@
+{% extends 'index_base.html' %}
+
+{% block title %}基德资源搜索站 - 首页{% endblock %}
+
+{% block content %}
+    <section class="hero-section">
+        <h2 class="hero-title">全网影视资源，一搜即达</h2>
+        
+        <div class="search-wrapper">
+            <div class="search-box">
+                <input type="text" placeholder="只输入剧名即可，无需添加「第x季」">
+                <button>搜索</button>
+            </div>
+
+            <div class="hot-tags-wrapper">
+                <span class="hot-label">热门搜索：</span>
+                <div class="desktop-tag"><span class="rank-dot">1</span>成何体统</div>
+                <div class="desktop-tag"><span class="rank-dot">2</span>太平年</div>
+                <div class="desktop-tag"><span class="rank-dot">3</span>阿凡达</div>
+                <div class="desktop-tag"><span class="rank-dot">4</span>年少有为</div>
+                <div class="desktop-tag"><span class="rank-dot">5</span>生命树</div>
+                <div class="desktop-tag">怪奇物语</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-header">
+            <h3>每日更新</h3>
+            <div class="tab-group">
+                <div class="tab-btn active" onclick="switchTab('tv')">电视剧 (综艺)</div>
+                <div class="tab-btn" onclick="switchTab('movie')">电影</div>
+            </div>
+        </div>
+
+        <div id="tv-list">
+            <div class="rank-list-item">
+                <div class="rank-num">1</div>
+                <div class="item-title">师兄啊师兄</div>
+                <div class="item-status">更新至 128集</div>
+            </div>
+            <div class="rank-list-item">
+                <div class="rank-num">2</div>
+                <div class="item-title">地狱乐 第二季</div>
+                <div class="item-status">更新至 05集</div>
+            </div>
+            <div class="rank-list-item">
+                <div class="rank-num">3</div>
+                <div class="item-title">重返青春</div>
+                <div class="item-status">更新至 12集</div>
+            </div>
+            <div class="rank-list-item">
+                <div class="rank-num">4</div>
+                <div class="item-title">神印王座</div>
+                <div class="item-status">更新至 198集</div>
+            </div>
+            <div class="rank-list-item">
+                <div class="rank-num">5</div>
+                <div class="item-title">繁华落尽</div>
+                <div class="item-status">更新至 34集</div>
+            </div>
+        </div>
+        
+        <div id="movie-list" style="display: none;">
+            <div class="rank-list-item">
+                <div class="rank-num">1</div>
+                <div class="item-title">阿凡达：水之道</div>
+                <div class="item-status">HD 1080P</div>
+            </div>
+             <div class="rank-list-item">
+                <div class="rank-num">2</div>
+                <div class="item-title">流浪地球3</div>
+                <div class="item-status">预告片</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="feature-grid">
+        <div class="feature-card" @click="showBanner = true">
+            <div class="feature-left">
+                <div class="feature-icon-box bg-blue-light">
+                    <i class="ri-group-line"></i>
+                </div>
+                <div class="feature-text">
+                    <h4>加入社群</h4>
+                    <p>获取最新资源</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-left">
+                <div class="feature-icon-box bg-purple-light">
+                    <i class="ri-film-line"></i>
+                </div>
+                <div class="feature-text">
+                    <h4>短剧专区</h4>
+                    <p>免费看短剧</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-left">
+                <div class="feature-icon-box bg-orange-light">
+                    <i class="ri-bar-chart-line"></i>
+                </div>
+                <div class="feature-text">
+                    <h4>热门榜单</h4>
+                    <p>大家都在看</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-left">
+                <div class="feature-icon-box bg-green-light">
+                    <i class="ri-message-2-line"></i>
+                </div>
+                <div class="feature-text">
+                    <h4>求片通道</h4>
+                    <p>找不到告诉我</p>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 这里只放首页特有的 Tab 切换逻辑
+    function switchTab(type) {
+        const btns = document.querySelectorAll('.tab-btn');
+        const tvList = document.getElementById('tv-list');
+        const movieList = document.getElementById('movie-list');
+
+        if (type === 'tv') {
+            btns[0].classList.add('active');
+            btns[1].classList.remove('active');
+            tvList.style.display = 'block';
+            movieList.style.display = 'none';
+        } else {
+            btns[0].classList.remove('active');
+            btns[1].classList.add('active');
+            tvList.style.display = 'none';
+            movieList.style.display = 'block';
+        }
+    }
+</script>
+{% endblock %}

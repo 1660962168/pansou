@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>夸克风格弹窗 - CDN版</title>
+    
+    <link rel="stylesheet" href="//unpkg.com/element-plus/dist/index.css" />
+    
+    <style>
+        body { font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "微软雅黑", Arial, sans-serif; background-color: #f0f2f5; padding: 50px; }
+        
+        /* 模拟提示框的基础样式 */
+        .tip-box {
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            text-align: center;
+            border: 1px solid transparent;
+        }
+
+        /* 红色款 */
+        .tip-red { background-color: #FEF0F0; border-color: #FDE2E2; color: #F56C6C; }
+        /* 黄色款 */
+        .tip-yellow { background-color: #FDF6EC; border-color: #FAECD8; color: #E6A23C; }
+        /* 蓝色款 */
+        .tip-blue { background-color: #ECF5FF; border-color: #D9ECFF; color: #409EFF; }
+
+        /* 底部大按钮样式 */
+        .orange-btn-wrapper { margin-top: 20px; text-align: center; }
+        .orange-btn {
+            width: 100%;
+            background-color: #fff8f0 !important;
+            border-color: #ffdab3 !important;
+            color: #ff6a00 !important;
+            padding: 20px 0 !important;
+            font-weight: bold;
+        }
+        .orange-btn:hover {
+            background-color: #fff0e0 !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <el-button type="primary" @click="dialogVisible = true" size="large">
+            点击打开夸克风格弹窗
+        </el-button>
+
+        <el-dialog
+            v-model="dialogVisible"
+            title="" 
+            width="400px"
+            center
+            align-center
+            style="border-radius: 12px;"
+        >
+            <div style="text-align: center;">
+                
+                <div style="color: #409EFF; font-weight: bold; margin-bottom: 10px;">
+                    用夸克APP
+                </div>
+                <div style="color: #909399; font-size: 12px; margin-bottom: 15px;">
+                    打开夸克APP - 搜索框 - 相机图标 - 扫码
+                </div>
+
+                <img 
+                    src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=Example" 
+                    style="width: 140px; height: 140px; margin-bottom: 20px; border: 1px solid #eee; padding: 5px; border-radius: 4px;"
+                >
+
+                <div class="tip-box tip-red">
+                    <strong>切勿直接下载！</strong> 必须先保存到自己网盘，再从网盘APP下载
+                </div>
+
+                <div class="tip-box tip-yellow">
+                    夸克和谐快，如果全部和谐建议切换百度盘
+                </div>
+
+                <div class="tip-box tip-blue">
+                    链接10分钟后失效，过期请重新获取
+                </div>
+
+                <div style="text-align: left; margin-top: 15px; font-weight: bold; color: #606266;">
+                    师兄啊师兄
+                </div>
+                <div style="text-align: left; margin-top: 5px; font-size: 12px; color: #909399; cursor: pointer;">
+                    > 电脑上方不便扫码？点这里复制链接
+                </div>
+
+                <div class="orange-btn-wrapper">
+                    <el-button class="orange-btn">
+                        觉得好用？进群获取更多独家资源 >
+                    </el-button>
+                </div>
+                
+                <div style="font-size: 12px; color: #999; margin-top: 15px; transform: scale(0.9);">
+                    本站链接自动收集自公开网盘，不存储不传播任何文件。
+                </div>
+
+            </div>
+        </el-dialog>
+    </div>
+
+    <script src="//unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <script src="//unpkg.com/element-plus/dist/index.full.js"></script>
+
+    <script>
+        const { createApp, ref } = Vue;
+
+        const App = {
+            setup() {
+                // 定义一个变量控制弹窗显示，默认为 false (如果你想一打开网页就显示，改成 true)
+                const dialogVisible = ref(false);
+
+                return {
+                    dialogVisible
+                };
+            }
+        };
+
+        const app = createApp(App);
+        // 使用 ElementPlus 插件
+        app.use(ElementPlus);
+        // 挂载到页面上的 #app 元素
+        app.mount("#app");
+    </script>
+</body>
+</html>
