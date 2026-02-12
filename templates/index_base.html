@@ -8,14 +8,16 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
-    
+
     <style>
         /* 确保弹窗默认有 flex 布局，但由 v-show 控制显示隐藏 */
         .banner-qr-overlay {
-            display: flex; /* 保持居中布局 */
+            display: flex;
+            /* 保持居中布局 */
         }
+
         /* 当 v-show 为 false 时，Vue 会自动加上 style="display: none;"，所以这里不用担心 */
-        
+
         /* 鼠标放上去显示小手，提示可以点击 */
         .top-notice {
             cursor: pointer;
@@ -26,7 +28,7 @@
 
 <body>
     <div id="app">
-        
+
         <div class="top-notice" v-if="showNotice" @click="showBanner = true">
             <span>资源失效/没找到？扫码进群帮你解决 ></span>
             <div class="close-btn" @click.stop="hideNotice">
@@ -45,16 +47,32 @@
                     <a href="#">每日更新</a>
                     <a href="#">短剧专区</a>
                     <a href="#">热门榜单</a>
-                    <a href="#">求片通道</a>
+                    <a href="#" @click="help = true">求片通道</a>
                 </nav>
-                <div class="mobile-menu-btn">
+                <div class="mobile-menu-btn" @click="menu = true">
                     <i class="ri-menu-line"></i>
                 </div>
             </div>
         </header>
 
         <main class="container">
-            
+            <div data-v-be8f357b="" class="layer-overlay" v-show="help" @click="help = false" style="display: none;">
+                <div @click.stop data-v-be8f357b="" class="layer-box">
+                    <div data-v-be8f357b="" class="layer-title">提交需求</div><textarea data-v-be8f357b=""
+                        class="layer-textarea" placeholder="请输入你想看的资源信息~"></textarea>
+                    <div data-v-be8f357b="" class="layer-btn">提交</div>
+                </div>
+            </div>
+            <div class="drawer-overlay" v-show="menu" @click="menu = false" style="display: none;">
+                <div class="drawer-box" @click.stop>
+                    <a href="/" class="drawer-item">首页</a>
+                    <a href="/daily-update" class="drawer-item">每日更新</a>
+                    <a href="/drama" class="drawer-item">短剧专区</a>
+                    <a href="/hot" class="drawer-item">热门榜单</a>
+                    <div class="drawer-item" @click="help = true; menu = false">求片通道</div>
+                    <div class="drawer-item" @click="showBanner = true; menu = false">点我加群</div>
+                </div>
+            </div>
             <div class="banner-qr-overlay" v-show="showBanner" style="display: none;">
                 <div class="banner-qr-box">
                     <div class="banner-qr-header">
@@ -74,7 +92,6 @@
                     </div>
                 </div>
             </div>
-
             {% block content %}{% endblock %}
         </main>
 
@@ -91,22 +108,25 @@
         </div>
 
     </div>
-    
+
     {% block scripts %}{% endblock %}
-    
+
     <script src="{{ url_for('static', filename='js/vue.js') }}"></script>
     <script>
         var app = new Vue({
             el: "#app",
             // 核心修改：修改了下面这行注释，去掉了大括号，防止报错
             // 防止和 Python Flask 模板语法冲突
-            delimiters: ['${', '}'], 
+            delimiters: ['${', '}'],
             data() {
                 return {
                     // 控制弹窗显示（默认 false 不显示）
                     showBanner: false,
                     // 控制顶部通知条显示（默认 true 显示）
-                    showNotice: true
+                    showNotice: true,
+                    menu: false,
+                    help: false,
+
                 };
             },
             methods: {

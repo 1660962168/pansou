@@ -20,6 +20,12 @@ with app.app_context():
 def index():
     return render_template('index.html')
 
+@app.route('/daily-update')
+def daily_update():
+    return render_template('daily-update.html')
+
+
+
 if __name__ == '__main__':
     app.debug = True
     server = Server(app.wsgi_app)
