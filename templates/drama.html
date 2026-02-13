@@ -1,0 +1,51 @@
+{% extends 'index_base.html' %}
+
+{% block title %}基德资源搜索站{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/daily-update.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/DramaList.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="daily-layout" >
+    <div class="daily-main">
+        <div class="daily-search-wrapper">
+            <div class="daily-search-box">
+                <input type="text" placeholder="搜索短剧名称...">
+                <button>搜索</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div data-v-05c30ea3="" class="stats-bar"> 共 <span data-v-05c30ea3="" class="count-num">12065</span> 部短剧 </div>
+<div data-v-05c30ea3="" class="result-container">
+    <div data-v-05c30ea3="" class="drama-item">
+        <div data-v-05c30ea3="" class="drama-cover">
+            <img data-v-05c30ea3="" src="/drama-covers/3e538b98-038.jpg" alt="心序失格（74集）王皓祯＆叶鑫鑫（六金yE）" loading="lazy"
+                class="cover-img">
+        </div>
+        <div data-v-05c30ea3="" class="drama-info">
+            <div data-v-05c30ea3="" class="drama-title">心序失格（74集）王皓祯＆叶鑫鑫（六金yE）</div>
+            <div data-v-05c30ea3="" class="drama-meta">
+                <span data-v-05c30ea3="" class="meta-tag tag-episode">74集</span>
+            </div>
+        </div>
+        <div data-v-05c30ea3="" class="drama-actions">
+            <a data-v-05c30ea3="" href="javascript:;" class="item-btn btn-quark" >
+                <img @click="ObtainResources_quark()" data-v-05c30ea3=""
+                    src="{{ url_for('static', filename='images/quark.svg') }}" alt="夸克" class="btn-icon"></a><a data-v-05c30ea3="" href="javascript:;"
+                class="item-btn btn-baidu">
+                <img @click="ObtainResources_baidu()" data-v-05c30ea3=""
+                    src="{{ url_for('static', filename='images/baidu.svg') }}" alt="百度" class="btn-icon">
+                </a>
+        </div>
+    </div>
+
+    </a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+
+{% endblock %}

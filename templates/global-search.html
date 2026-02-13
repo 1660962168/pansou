@@ -1,0 +1,36 @@
+{% extends 'index_base.html' %}
+{% block title %}基德资源搜索站{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/GlobalSearch.css') }}">
+{% endblock %}
+{% block content %}
+<div data-v-85a90832="" class="page-content">
+    <div data-v-85a90832="" class="search-section">
+        <div data-v-85a90832="" class="search-header">
+            <h1 data-v-85a90832="" class="search-title">全网搜</h1>
+            <p data-v-85a90832="" class="search-desc">输入影视名称，智能匹配正确片名</p>
+        </div>
+        <div class="search-box"><input type="text" placeholder="输入影视名称..."> <button>搜索</button></div>
+    </div>
+    <div data-v-85a90832="" class="welcome-section">
+        <div class="welcome-content" data-v-85a90832="">
+            <div class="welcome-icon" data-v-85a90832=""><svg viewBox="0 0 24 24" width="48" height="48" fill="none"
+                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                    data-v-85a90832="">
+                    <circle cx="11" cy="11" r="8" data-v-85a90832=""></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" data-v-85a90832=""></line>
+                </svg></div>
+            <h2 data-v-85a90832="">智能影视搜索</h2>
+            <p data-v-85a90832="">基于全球影视数据库 TMDB</p>
+            <div class="feature-list" data-v-85a90832="">
+                <div class="feature-item" data-v-85a90832=""><span data-v-85a90832="">片名智能匹配，减少输错</span></div>
+                <div class="feature-item" data-v-85a90832=""><span data-v-85a90832="">点击海报直接搜索资源</span></div>
+                <div class="feature-item" data-v-85a90832=""><span data-v-85a90832="">支持电影、电视剧、动漫</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+{% endblock %}

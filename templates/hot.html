@@ -1,0 +1,83 @@
+{% extends 'index_base.html' %}
+{% block title %}基德资源搜索站{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/daily-update.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/HotRanking.css') }}">
+<style>
+    .container{
+        padding: 0;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div data-v-038c68d3="" class="ranking-tip" v-if="showTip">
+    <div data-v-038c68d3="" class="tip-content"><span data-v-038c68d3="" class="tip-text">部分影视可能仍在院线上映，暂无网盘资源</span>
+    </div><button data-v-038c68d3="" class="tip-close" @click="showTip = false">×</button>
+</div>
+<div data-v-038c68d3="" class="filters-section">
+    <div data-v-038c68d3="" class="filters-inner">
+        <div data-v-038c68d3="" class="channel-tabs"><button data-v-038c68d3=""
+                class="channel-tab active">电影</button><button data-v-038c68d3="" class="channel-tab">电视剧</button><button
+                data-v-038c68d3="" class="channel-tab">综艺</button><button data-v-038c68d3=""
+                class="channel-tab">动漫</button><button data-v-038c68d3="" class="channel-tab">短剧</button></div>
+        <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">榜单</span>
+            <div data-v-038c68d3="" class="filter-scroll"><span data-v-038c68d3=""
+                    class="filter-opt active">热搜榜</span><span data-v-038c68d3="" class="filter-opt">新片榜</span><span
+                    data-v-038c68d3="" class="filter-opt">好评榜</span></div>
+        </div>
+        <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">地区</span>
+            <div data-v-038c68d3="" class="filter-scroll"><span data-v-038c68d3=""
+                    class="filter-opt active">全部</span><span data-v-038c68d3="" class="filter-opt">大陆</span><span
+                    data-v-038c68d3="" class="filter-opt">美国</span><span data-v-038c68d3=""
+                    class="filter-opt">日本</span><span data-v-038c68d3="" class="filter-opt">韩国</span><span
+                    data-v-038c68d3="" class="filter-opt">香港</span><span data-v-038c68d3=""
+                    class="filter-opt">台湾</span><span data-v-038c68d3="" class="filter-opt">英国</span><span
+                    data-v-038c68d3="" class="filter-opt">法国</span><span data-v-038c68d3="" class="filter-opt">泰国</span>
+            </div>
+        </div>
+        <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">年份</span>
+            <div data-v-038c68d3="" class="filter-scroll"><span data-v-038c68d3=""
+                    class="filter-opt active">全部</span><span data-v-038c68d3="" class="filter-opt">2026</span><span
+                    data-v-038c68d3="" class="filter-opt">2025</span><span data-v-038c68d3=""
+                    class="filter-opt">2024</span><span data-v-038c68d3="" class="filter-opt">2023</span><span
+                    data-v-038c68d3="" class="filter-opt">2022</span><span data-v-038c68d3=""
+                    class="filter-opt">2021</span><span data-v-038c68d3="" class="filter-opt">2020</span><span
+                    data-v-038c68d3="" class="filter-opt">2010年代</span><span data-v-038c68d3=""
+                    class="filter-opt">更早</span></div>
+        </div>
+        <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">类型</span>
+            <div data-v-038c68d3="" class="filter-scroll"><span data-v-038c68d3=""
+                    class="filter-opt active">全部</span><span data-v-038c68d3="" class="filter-opt">喜剧</span><span
+                    data-v-038c68d3="" class="filter-opt">动作</span><span data-v-038c68d3=""
+                    class="filter-opt">爱情</span><span data-v-038c68d3="" class="filter-opt">科幻</span><span
+                    data-v-038c68d3="" class="filter-opt">悬疑</span><span data-v-038c68d3=""
+                    class="filter-opt">剧情</span><span data-v-038c68d3="" class="filter-opt">恐怖</span><span
+                    data-v-038c68d3="" class="filter-opt">犯罪</span><span data-v-038c68d3=""
+                    class="filter-opt">战争</span><span data-v-038c68d3="" class="filter-opt">奇幻</span></div>
+        </div>
+    </div>
+</div>
+<div data-v-038c68d3="" class="content-section">
+    <div data-v-038c68d3="" class="result-header">
+        <h2 data-v-038c68d3="" class="result-title">电影 · 热搜榜</h2><span data-v-038c68d3="" class="result-count">已加载 30
+            部</span>
+    </div>
+    <div data-v-038c68d3="" class="movie-grid">
+        <div data-v-038c68d3="" class="movie-card">
+            <div data-v-038c68d3="" class="poster-wrapper"><img data-v-038c68d3=""
+                    src="http://s2.zimgs.cn/ims?at=sc&amp;kt=url&amp;key=aHR0cHM6Ly9pbWczLmRvdWJhbmlvLmNvbS92aWV3L3Bob3RvL3NfcmF0aW9fcG9zdGVyL3B1YmxpYy9wMjkyMjQ2MTU5My53ZWJw&amp;sign=yx:S3FV7NmclYhWvZZ2bfDntJHFRGQ=&amp;tv=0_0&amp;p=&amp;width=270&amp;height=404"
+                    alt="怒袭" class="poster" loading="lazy">
+                <div data-v-038c68d3="" class="rank-badge rank-1">1</div><!---->
+                <div data-v-038c68d3="" class="hot-badge">76.8万</div>
+            </div>
+            <div data-v-038c68d3="" class="movie-info">
+                <div data-v-038c68d3="" class="movie-title" title="怒袭">怒袭</div>
+                <div data-v-038c68d3="" class="movie-meta">大陆 · 2026</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+{% endblock %}

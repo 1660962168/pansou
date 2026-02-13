@@ -1,0 +1,511 @@
+.drama-page[data-v-05c30ea3] {
+    padding-top: 56px;
+    min-height: 100vh
+}
+
+.drama-search[data-v-05c30ea3] {
+    max-width: 900px;
+    margin: 16px auto 0;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px
+}
+
+.clear-search-btn[data-v-05c30ea3] {
+    height: 44px;
+    padding: 0 16px;
+    border: 1.5px solid var(--color-border);
+    border-radius: var(--radius-full);
+    background: var(--color-bg-card);
+    color: var(--color-text-secondary);
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap
+}
+
+.stats-bar[data-v-05c30ea3] {
+    max-width: 900px;
+    margin: 10px auto 0;
+    padding: 0 20px;
+    font-size: var(--text-sm);
+    color: var(--color-text-muted)
+}
+
+.count-num[data-v-05c30ea3] {
+    color: var(--color-primary);
+    font-weight: 700
+}
+
+.result-container[data-v-05c30ea3] {
+    max-width: 900px;
+    margin: 10px auto;
+    padding: 0 12px
+}
+
+@media (min-width: 768px) {
+    .result-container[data-v-05c30ea3] {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-3);
+        padding: 0 16px
+    }
+
+    .drama-item[data-v-05c30ea3] {
+        border-radius: var(--radius-md);
+        border: 1px solid var(--color-border-light);
+        border-bottom: 1px solid var(--color-border-light)
+    }
+
+    .drama-item[data-v-05c30ea3]:first-child,
+    .drama-item[data-v-05c30ea3]:last-child,
+    .drama-item[data-v-05c30ea3]:only-child {
+        border-radius: var(--radius-md)
+    }
+
+    .drama-item[data-v-05c30ea3]:hover {
+        box-shadow: 0 4px 16px #0000000f;
+        transform: translateY(-1px)
+    }
+
+    .empty-state[data-v-05c30ea3] {
+        grid-column: 1 / -1
+    }
+}
+
+.drama-item[data-v-05c30ea3] {
+    display: flex;
+    align-items: center;
+    padding: 12px 14px;
+    background: var(--color-bg-card);
+    border-bottom: 1px solid var(--color-border-light);
+    transition: background .15s;
+    cursor: pointer
+}
+
+.drama-item[data-v-05c30ea3]:active {
+    background: var(--color-border-light)
+}
+
+.drama-item[data-v-05c30ea3]:first-child {
+    border-radius: var(--radius-md) var(--radius-md) 0 0
+}
+
+.drama-item[data-v-05c30ea3]:last-child {
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-bottom: none
+}
+
+.drama-item[data-v-05c30ea3]:only-child {
+    border-radius: var(--radius-md)
+}
+
+.drama-cover[data-v-05c30ea3] {
+    width: 56px;
+    height: 75px;
+    border-radius: 6px;
+    overflow: hidden;
+    flex-shrink: 0;
+    margin-right: 12px
+}
+
+.cover-img[data-v-05c30ea3] {
+    width: 100%;
+    height: 100%;
+    -o-object-fit: cover;
+    object-fit: cover
+}
+
+.cover-placeholder[data-v-05c30ea3] {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700
+}
+
+.drama-info[data-v-05c30ea3] {
+    flex: 1;
+    min-width: 0;
+    margin-right: 10px
+}
+
+.drama-title[data-v-05c30ea3] {
+    font-size: var(--text-base);
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden
+}
+
+.drama-meta[data-v-05c30ea3] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px
+}
+
+.meta-tag[data-v-05c30ea3] {
+    font-size: var(--text-xs);
+    padding: 1px 7px;
+    border-radius: var(--radius-full);
+    font-weight: 500
+}
+
+.tag-episode[data-v-05c30ea3] {
+    background: #2563eb14;
+    color: var(--color-primary)
+}
+
+.drama-actions[data-v-05c30ea3] {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0
+}
+
+.item-btn[data-v-05c30ea3] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: all .15s
+}
+
+.item-btn[data-v-05c30ea3]:active {
+    transform: scale(.9)
+}
+
+.btn-quark[data-v-05c30ea3] {
+    background: linear-gradient(135deg, #fef3c7, #fde68a)
+}
+
+.btn-baidu[data-v-05c30ea3] {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe)
+}
+
+.btn-icon[data-v-05c30ea3] {
+    width: 20px;
+    height: 20px;
+    -o-object-fit: contain;
+    object-fit: contain
+}
+
+.loading-state[data-v-05c30ea3] {
+    text-align: center;
+    padding: 60px 0
+}
+
+.loading-spinner[data-v-05c30ea3] {
+    width: 36px;
+    height: 36px;
+    margin: 0 auto;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin-05c30ea3 .8s linear infinite
+}
+
+@keyframes spin-05c30ea3 {
+    to {
+        transform: rotate(360deg)
+    }
+}
+
+.empty-state[data-v-05c30ea3] {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--color-text-muted);
+    font-size: var(--text-base)
+}
+
+.loading-more[data-v-05c30ea3] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 20px;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm)
+}
+
+.loading-spinner.small[data-v-05c30ea3] {
+    width: 20px;
+    height: 20px;
+    border-width: 2px
+}
+
+.no-more[data-v-05c30ea3] {
+    text-align: center;
+    padding: 20px;
+    color: var(--color-text-muted);
+    font-size: var(--text-sm)
+}
+
+.back-top[data-v-05c30ea3] {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 40px;
+    height: 40px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    box-shadow: var(--shadow-md);
+    transition: all .2s;
+    z-index: 100
+}
+
+.back-top[data-v-05c30ea3]:hover {
+    color: var(--color-primary);
+    border-color: var(--color-primary)
+}
+
+.back-top[data-v-05c30ea3]:active {
+    transform: scale(.9)
+}
+
+@media (max-width: 768px) {
+    .back-top[data-v-05c30ea3] {
+        bottom: 72px;
+        right: 16px
+    }
+}
+
+.fade-enter-active[data-v-05c30ea3],
+.fade-leave-active[data-v-05c30ea3] {
+    transition: opacity .3s
+}
+
+.fade-enter-from[data-v-05c30ea3],
+.fade-leave-to[data-v-05c30ea3] {
+    opacity: 0
+}
+
+.search-more-box[data-v-05c30ea3] {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center
+}
+
+.search-more-hint[data-v-05c30ea3] {
+    font-size: var(--text-sm);
+    color: var(--color-text-muted);
+    margin-bottom: 12px
+}
+
+.search-more-btn[data-v-05c30ea3] {
+    display: inline-block;
+    padding: 10px 24px;
+    background: var(--color-primary);
+    color: #fff;
+    border-radius: var(--radius-full);
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .15s
+}
+
+.search-more-btn[data-v-05c30ea3]:hover {
+    background: var(--color-primary-dark)
+}
+
+.detail-overlay[data-v-05c30ea3] {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #0000008c;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px
+}
+
+.detail-modal[data-v-05c30ea3] {
+    position: relative;
+    background: var(--color-bg-card);
+    border-radius: 20px;
+    padding: 28px 24px 24px;
+    max-width: 340px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px #0000004d;
+    animation: modal-in-05c30ea3 .3s ease
+}
+
+@keyframes modal-in-05c30ea3 {
+    0% {
+        opacity: 0;
+        transform: scale(.9) translateY(20px)
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0)
+    }
+}
+
+.detail-close[data-v-05c30ea3] {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: var(--color-border-light);
+    border-radius: 50%;
+    font-size: 14px;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .15s
+}
+
+.detail-close[data-v-05c30ea3]:hover {
+    background: var(--color-border);
+    color: var(--color-text-primary)
+}
+
+.detail-cover[data-v-05c30ea3] {
+    width: 180px;
+    height: 240px;
+    margin: 0 auto 16px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px #00000026
+}
+
+.detail-cover-img[data-v-05c30ea3] {
+    width: 100%;
+    height: 100%;
+    -o-object-fit: cover;
+    object-fit: cover
+}
+
+.detail-cover-placeholder[data-v-05c30ea3] {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 48px;
+    font-weight: 700
+}
+
+.detail-title[data-v-05c30ea3] {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+    margin-bottom: 6px;
+    padding: 0 10px
+}
+
+.detail-episode[data-v-05c30ea3] {
+    font-size: 14px;
+    color: var(--color-primary);
+    font-weight: 600;
+    margin-bottom: 18px;
+    background: #2563eb14;
+    display: inline-block;
+    padding: 3px 14px;
+    border-radius: 20px
+}
+
+.detail-actions[data-v-05c30ea3] {
+    display: flex;
+    gap: 10px;
+    justify-content: center
+}
+
+.detail-btn[data-v-05c30ea3] {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .15s
+}
+
+.detail-btn[data-v-05c30ea3]:active {
+    transform: scale(.95)
+}
+
+.btn-quark-lg[data-v-05c30ea3] {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #92400e
+}
+
+.btn-baidu-lg[data-v-05c30ea3] {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #1e40af
+}
+
+.detail-btn-icon[data-v-05c30ea3] {
+    width: 20px;
+    height: 20px;
+    -o-object-fit: contain;
+    object-fit: contain
+}
+@media (min-width: 768px){
+    .daily-layout {
+        width: 75%;
+        margin: 0 auto
+    }
+}
+@media (max-width: 768px) {
+    .daily-layout {
+        width: 100% !important;
+    }
+    .drama-page[data-v-05c30ea3] {
+        padding-top: 48px
+    }
+
+    .drama-search[data-v-05c30ea3] {
+        padding: 0 12px;
+        margin-top: 12px
+    }
+
+    .result-container[data-v-05c30ea3] {
+        padding: 0 8px
+    }
+
+    .drama-item[data-v-05c30ea3] {
+        padding: 10px 12px
+    }
+
+    .drama-cover[data-v-05c30ea3] {
+        width: 50px;
+        height: 67px;
+        margin-right: 10px
+    }
+
+    .cover-placeholder[data-v-05c30ea3] {
+        font-size: 18px
+    }
+}

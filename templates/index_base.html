@@ -40,8 +40,8 @@
                 <nav class="desktop-nav">
                     <a href="/" class="{{ 'active' if request.path == '/' else '' }}">首页</a>
                     <a href="/daily-update" class="{{ 'active' if request.path == '/daily-update' else '' }}">每日更新</a>
-                    <a href="#">短剧专区</a>
-                    <a href="#">热门榜单</a>
+                    <a href="/drama" class="{{ 'active' if request.path == '/drama' else '' }}">短剧专区</a>
+                    <a href="/hot" class="{{ 'active' if request.path == '/hot' else '' }}">热门榜单</a>
                     <a href="#" @click="help = true">求片通道</a>
                 </nav>
                 <div class="mobile-menu-btn" @click="menu = true">
@@ -62,10 +62,21 @@
         </div>
 
         <div class="mobile-tab-bar">
-            <div class="tab-item active"><i class="ri-home-5-line"></i><span>首页</span></div>
-            <div class="tab-item"><i class="ri-calendar-event-line"></i><span>每日更新</span></div>
-            <div class="tab-item"><i class="ri-movie-line"></i><span>短剧</span></div>
-            <div class="tab-item"><i class="ri-search-line"></i><span>全网搜</span></div>
+            <a href="/" class="tab-item {{ 'active' if request.path == '/' else '' }}">
+                <i class="ri-home-5-line"></i><span>首页</span>
+            </a>
+
+            <a href="/daily-update" class="tab-item {{ 'active' if request.path == '/daily-update' else '' }}">
+                <i class="ri-calendar-event-line"></i><span>每日更新</span>
+            </a>
+
+            <a href="/drama" class="tab-item {{ 'active' if request.path == '/drama' else '' }}">
+                <i class="ri-movie-line"></i><span>短剧</span>
+            </a>
+
+            <a href="/global-search" class="tab-item {{ 'active' if request.path == '/global-search' else '' }}">
+                <i class="ri-search-line"></i><span>全网搜</span>
+            </a>
         </div>
 
     </div>
@@ -84,17 +95,34 @@
                     menu: false,
                     help: false,
                     dialog_overlay: false,
+                    showTip: true,
+                    // --- 新增变量开始 ---
+                    dialogTitle: '夸克APP', // 弹窗标题中的APP名称
+                    dialogTips: '打开夸克APP - 搜索框 - 相机图标 - 扫码', // 扫码提示语
+                    showPwdHint: false, // 是否显示提取码
+                    showYellowTip: true // 是否显示黄色提示条
+                    // --- 新增变量结束 ---
                 };
             },
             methods: {
                 hideNotice() {
                     this.showNotice = false;
                 },
+                // 点击夸克图标触发
                 ObtainResources_quark() {
-                    alert("获取夸克资源链接的功能正在开发中！");
+                    this.dialogTitle = '夸克APP';
+                    this.dialogTips = '打开夸克APP - 搜索框 - 相机图标 - 扫码';
+                    this.showPwdHint = false; // 夸克不显示提取码
+                    this.showYellowTip = true; // 夸克显示防和谐提示
+                    this.dialog_overlay = true; // 打开弹窗
                 },
+                // 点击百度网盘图标触发
                 ObtainResources_baidu() {
-
+                    this.dialogTitle = '百度网盘';
+                    this.dialogTips = '打开百度网盘APP - 扫一扫';
+                    this.showPwdHint = true; // 百度显示提取码
+                    this.showYellowTip = false; // 百度隐藏黄色提示
+                    this.dialog_overlay = true; // 打开弹窗
                 }
             },
             mounted() {

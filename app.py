@@ -24,6 +24,21 @@ def index():
 def daily_update():
     return render_template('daily-update.html')
 
+@app.route('/drama')
+def drama():
+    return render_template('drama.html')
+
+@app.route('/hot')
+def hot():
+    return render_template('hot.html')
+
+@app.route('/global-search')
+def global_search():
+    return render_template('global-search.html')
+
+@app.route('/search')
+def search():
+    return render_template('search.html')
 
 
 if __name__ == '__main__':

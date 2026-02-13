@@ -42,7 +42,7 @@
 
 <!-- 网盘弹窗 -->
 <div data-v-60306d9f="" data-v-f8509e42="" class="dialog-overlay" v-if="dialog_overlay">
-    <div data-v-60306d9f="" class="dialog-box"><button data-v-60306d9f="" class="close-btn"><svg data-v-60306d9f=""
+    <div data-v-60306d9f="" class="dialog-box"><button data-v-60306d9f="" class="close-btn" @click="dialog_overlay = false"><svg data-v-60306d9f=""
                 viewBox="0 0 24 24" width="20" height="20">
                 <path data-v-60306d9f="" fill="currentColor"
                     d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z">
@@ -50,18 +50,33 @@
             </svg></button>
         <div data-v-60306d9f="" class="dialog-content">
             <div data-v-60306d9f="" class="qrcode-section">
-                <div data-v-60306d9f="" class="qrcode-title"> 用<span data-v-60306d9f="">夸克APP</span></div>
-                <div data-v-60306d9f="" class="qrcode-tips">打开夸克APP - 搜索框 - 相机图标 - 扫码</div>
-                <div data-v-60306d9f="" class="qrcode-box"><canvas height="120" width="120"
-                        style="height: 120px; width: 120px;"></canvas></div><!---->
+                <div data-v-60306d9f="" class="qrcode-title"> 用<span data-v-60306d9f="">${ dialogTitle }</span></div>
+
+                <div data-v-60306d9f="" class="qrcode-tips">${ dialogTips }</div>
+
+                <div data-v-60306d9f="" class="qrcode-box">
+                    <canvas height="120" width="120" style="height: 120px; width: 120px;"></canvas>
+                </div>
+
+                <div data-v-60306d9f="" class="pwd-hint" v-if="showPwdHint">
+                    提取码：<strong data-v-60306d9f="">yyds</strong>
+                </div>
             </div>
+
             <div data-v-60306d9f="" class="usage-tips">
-                <div data-v-60306d9f="" class="tip-item tip-red"><span data-v-60306d9f="" class="tip-text"><strong
-                            data-v-60306d9f="">切勿直接下载！</strong>必须先保存到自己网盘，再从网盘APP下载</span></div>
-                <div data-v-60306d9f="" class="tip-item tip-yellow"><span data-v-60306d9f=""
-                        class="tip-text">夸克和谐快，如果全部和谐建议切换百度盘</span></div>
-                <div data-v-60306d9f="" class="tip-item tip-muted"><span data-v-60306d9f=""
-                        class="tip-text">链接10分钟后失效，过期请重新获取</span></div>
+                <div data-v-60306d9f="" class="tip-item tip-red">
+                    <span data-v-60306d9f="" class="tip-text">
+                        <strong data-v-60306d9f="">切勿直接下载！</strong>必须先保存到自己网盘，再从网盘APP下载
+                    </span>
+                </div>
+
+                <div data-v-60306d9f="" class="tip-item tip-yellow" v-if="showYellowTip">
+                    <span data-v-60306d9f="" class="tip-text">夸克和谐快，如果全部和谐建议切换百度盘</span>
+                </div>
+
+                <div data-v-60306d9f="" class="tip-item tip-muted">
+                    <span data-v-60306d9f="" class="tip-text">链接10分钟后失效，过期请重新获取</span>
+                </div>
             </div>
             <div data-v-60306d9f="" class="resource-nav">
                 <div data-v-60306d9f="" class="nav-item resource-title"><span data-v-60306d9f="" class="label">地狱乐
@@ -74,21 +89,29 @@
                                 href="https://pan.quark.cn/s/6862b593352d" target="_blank" rel="noopener noreferrer"
                                 class="resource-link">https://pan.quark.cn/s/6862b593352d</a>
                             <div data-v-60306d9f="" class="btn-group">
-                                <button data-v-60306d9f="" class="action-btn copy-btn"><svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16">
+                                <button data-v-60306d9f="" class="action-btn copy-btn"><svg data-v-60306d9f=""
+                                        viewBox="0 0 24 24" width="16" height="16">
                                         <path data-v-60306d9f="" fill="currentColor"
                                             d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z">
                                         </path>
                                     </svg>
                                     <span data-v-60306d9f="">复制链接</span>
                                 </button>
-                                <a data-v-60306d9f="" class="action-btn open-btn" href="https://pan.quark.cn/s/6862b593352d" target="_blank" rel="noopener noreferrer"><svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16"><path data-v-60306d9f="" fill="currentColor" d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"></path></svg><span data-v-60306d9f="">打开</span></a>
+                                <a data-v-60306d9f="" class="action-btn open-btn"
+                                    href="https://pan.quark.cn/s/6862b593352d" target="_blank"
+                                    rel="noopener noreferrer"><svg data-v-60306d9f="" viewBox="0 0 24 24" width="16"
+                                        height="16">
+                                        <path data-v-60306d9f="" fill="currentColor"
+                                            d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z">
+                                        </path>
+                                    </svg><span data-v-60306d9f="">打开</span></a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div data-v-60306d9f="" class="group-tip"><span data-v-60306d9f=""
+        <div data-v-60306d9f="" class="group-tip" @click="showBanner = true; dialog_overlay = false"><span data-v-60306d9f=""
                 class="group-tip-text">觉得好用？进群获取更多独家资源</span><span data-v-60306d9f="" class="group-tip-arrow">›</span>
         </div>
         <div data-v-60306d9f="" class="statement">

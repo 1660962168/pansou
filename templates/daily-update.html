@@ -1,6 +1,6 @@
 {% extends 'index_base.html' %}
 
-{% block title %}每日更新 - 基德资源搜索站{% endblock %}
+{% block title %}基德资源搜索站{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/daily-update.css') }}">
@@ -33,10 +33,11 @@
                     </div>
                 </div>
                 <div class="res-actions">
-                    <div class="icon-btn icon-quark" @click="showBanner=true">
+                    <div class="icon-btn icon-quark" @click="ObtainResources_quark()">
                         <img src="{{ url_for('static', filename='images/quark.svg') }}" alt="">
                     </div>
-                    <div class="icon-btn icon-cloud" @click="showBanner=true">
+
+                    <div class="icon-btn icon-cloud" @click="ObtainResources_baidu()">
                         <img src="{{ url_for('static', filename='images/baidu.svg') }}" alt="">
                     </div>
                 </div>
@@ -52,10 +53,11 @@
                     </div>
                 </div>
                 <div class="res-actions">
-                    <div class="icon-btn icon-quark" @click="showBanner=true">
+                    <div class="icon-btn icon-quark" @click="ObtainResources_quark()">
                         <img src="{{ url_for('static', filename='images/quark.svg') }}" alt="">
                     </div>
-                    <div class="icon-btn icon-cloud" @click="showBanner=true">
+
+                    <div class="icon-btn icon-cloud" @click="ObtainResources_baidu()">
                         <img src="{{ url_for('static', filename='images/baidu.svg') }}" alt="">
                     </div>
                 </div>
