@@ -1,0 +1,100 @@
+<!-- 求片通道弹窗 -->
+<div data-v-be8f357b="" class="layer-overlay" v-if="help" @click="help = false">
+    <div @click.stop data-v-be8f357b="" class="layer-box">
+        <div data-v-be8f357b="" class="layer-title">提交需求</div>
+        <textarea data-v-be8f357b="" class="layer-textarea" placeholder="请输入你想看的资源信息~"></textarea>
+        <div data-v-be8f357b="" class="layer-btn">提交</div>
+    </div>
+</div>
+
+<!-- 侧边菜单 -->
+<div class="drawer-overlay" v-if="menu" @click="menu = false">
+    <div class="drawer-box" @click.stop>
+        <a href="/" class="drawer-item">首页</a>
+        <a href="/daily-update" class="drawer-item">每日更新</a>
+        <a href="/drama" class="drawer-item">短剧专区</a>
+        <a href="/hot" class="drawer-item">热门榜单</a>
+        <div class="drawer-item" @click="help = true; menu = false">求片通道</div>
+        <div class="drawer-item" @click="showBanner = true; menu = false">点我加群</div>
+    </div>
+</div>
+
+<!-- 扫码加群弹窗 -->
+<div class="banner-qr-overlay" v-if="showBanner">
+    <div class="banner-qr-box">
+        <div class="banner-qr-header">
+            <button class="banner-qr-close" @click="showBanner = false">×</button>
+            <h3>扫码进群</h3>
+            <p>失效补链 · 资源求助 · 点映通知</p>
+        </div>
+        <div class="banner-qr-body">
+            <div class="banner-qr-img-wrap">
+                <img src="/uploads/f574b05f.png" alt="群二维码">
+            </div>
+            <p class="banner-qr-desc">资源失效补链 · 找不到的帮你找</p>
+            <p class="banner-qr-tip">截图保存 → 微信扫一扫 → 相册识别</p>
+        </div>
+        <div class="banner-qr-footer">
+            <button class="banner-qr-btn" @click="showBanner = false">我知道了</button>
+        </div>
+    </div>
+</div>
+
+<!-- 网盘弹窗 -->
+<div data-v-60306d9f="" data-v-f8509e42="" class="dialog-overlay" v-if="dialog_overlay">
+    <div data-v-60306d9f="" class="dialog-box"><button data-v-60306d9f="" class="close-btn"><svg data-v-60306d9f=""
+                viewBox="0 0 24 24" width="20" height="20">
+                <path data-v-60306d9f="" fill="currentColor"
+                    d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z">
+                </path>
+            </svg></button>
+        <div data-v-60306d9f="" class="dialog-content">
+            <div data-v-60306d9f="" class="qrcode-section">
+                <div data-v-60306d9f="" class="qrcode-title"> 用<span data-v-60306d9f="">夸克APP</span></div>
+                <div data-v-60306d9f="" class="qrcode-tips">打开夸克APP - 搜索框 - 相机图标 - 扫码</div>
+                <div data-v-60306d9f="" class="qrcode-box"><canvas height="120" width="120"
+                        style="height: 120px; width: 120px;"></canvas></div><!---->
+            </div>
+            <div data-v-60306d9f="" class="usage-tips">
+                <div data-v-60306d9f="" class="tip-item tip-red"><span data-v-60306d9f="" class="tip-text"><strong
+                            data-v-60306d9f="">切勿直接下载！</strong>必须先保存到自己网盘，再从网盘APP下载</span></div>
+                <div data-v-60306d9f="" class="tip-item tip-yellow"><span data-v-60306d9f=""
+                        class="tip-text">夸克和谐快，如果全部和谐建议切换百度盘</span></div>
+                <div data-v-60306d9f="" class="tip-item tip-muted"><span data-v-60306d9f=""
+                        class="tip-text">链接10分钟后失效，过期请重新获取</span></div>
+            </div>
+            <div data-v-60306d9f="" class="resource-nav">
+                <div data-v-60306d9f="" class="nav-item resource-title"><span data-v-60306d9f="" class="label">地狱乐
+                        第二季</span></div><!---->
+                <div data-v-60306d9f="" class="pc-link-toggle"><button data-v-60306d9f="" class="toggle-link-btn"><span
+                            data-v-60306d9f="" class="toggle-arrow expanded">›</span><span
+                            data-v-60306d9f="">电脑上不方便扫码？点这里复制链接</span></button>
+                    <div data-v-60306d9f="" class="pc-link-content">
+                        <div data-v-60306d9f="" class="link-wrapper"><a data-v-60306d9f=""
+                                href="https://pan.quark.cn/s/6862b593352d" target="_blank" rel="noopener noreferrer"
+                                class="resource-link">https://pan.quark.cn/s/6862b593352d</a>
+                            <div data-v-60306d9f="" class="btn-group">
+                                <button data-v-60306d9f="" class="action-btn copy-btn"><svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16">
+                                        <path data-v-60306d9f="" fill="currentColor"
+                                            d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z">
+                                        </path>
+                                    </svg>
+                                    <span data-v-60306d9f="">复制链接</span>
+                                </button>
+                                <a data-v-60306d9f="" class="action-btn open-btn" href="https://pan.quark.cn/s/6862b593352d" target="_blank" rel="noopener noreferrer"><svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16"><path data-v-60306d9f="" fill="currentColor" d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"></path></svg><span data-v-60306d9f="">打开</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div data-v-60306d9f="" class="group-tip"><span data-v-60306d9f=""
+                class="group-tip-text">觉得好用？进群获取更多独家资源</span><span data-v-60306d9f="" class="group-tip-arrow">›</span>
+        </div>
+        <div data-v-60306d9f="" class="statement">
+            <div data-v-60306d9f="" class="statement-content">
+                <p data-v-60306d9f="">本站链接自动收集自公开网盘，不存储不传播任何文件。</p>
+            </div>
+        </div>
+    </div>
+</div>
