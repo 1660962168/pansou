@@ -1,0 +1,484 @@
+{% extends "admin/base.html" %}
+
+{% block title %}每日更新 - 后台管理{% endblock %}
+{% block page_title %}资源管理 / 每日更新{% endblock %}
+
+{% block content %}
+<div id="app" class="content-body" v-cloak>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">监控列表</div>
+            <button class="btn-primary" @click="openAddModal">
+                <i class="ri-add-line"></i> 添加监控
+            </button>
+        </div>
+
+        <div class="monitor-list">
+            <div class="list-header-row">
+                <div class="col-name-group">
+                    <div class="col-id">ID</div>
+                    <div class="col-name">名称</div>
+                </div>
+                <div class="col-switch">监控</div>
+                <div class="col-data-group">
+                    <div class="col-stats">检查/转存</div>
+                    <div class="col-info">最新/时间</div>
+                </div>
+                <div class="col-actions">操作</div>
+            </div>
+
+            <div class="monitor-item" v-for="(item, index) in items" :key="item.id">
+                
+                <div class="layer-main">
+                    <div class="col-name-group">
+                        <div class="col-id"><span class="id-badge">#${ item.id }</span></div>
+                        <div class="col-name">
+                            <div class="res-name" :title="item.name">${ item.name }</div>
+                            <span class="priority-tag">P${ item.priority }</span>
+                        </div>
+                    </div>
+
+                    <div class="col-switch">
+                        <span class="mobile-label">监控:</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" v-model="item.is_monitoring" @change="toggleMonitor(item)">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="col-data-group">
+                        <div class="col-stats">
+                            <div class="stat-box">
+                                <span class="mobile-label">检查:</span>
+                                <i class="ri-eye-line"></i> ${ item.check_count }
+                            </div>
+                            <div class="stat-box">
+                                <span class="mobile-label">转存:</span>
+                                <i class="ri-save-line"></i> ${ item.transfer_count }
+                            </div>
+                        </div>
+                        <div class="col-info">
+                            <div class="info-box">
+                                <span class="mobile-label">最新:</span>
+                                <span class="text-latest">${ item.latest }</span>
+                            </div>
+                            <div class="info-box">
+                                <span class="mobile-label">时间:</span>
+                                <span class="text-time">${ item.last_check }</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-actions">
+                        <button class="btn-mini btn-run" title="立即执行" @click="runTask(item)">
+                            <i class="ri-play-fill"></i> <span class="btn-text-mobile">执行</span>
+                        </button>
+                        <button class="btn-mini btn-edit" title="编辑" @click="openEditModal(item)">
+                            <i class="ri-edit-line"></i> <span class="btn-text-mobile">编辑</span>
+                        </button>
+                        <button class="btn-mini btn-copy" title="复制聚合链接" @click="copyLink(item.id)">
+                            <i class="ri-file-copy-line"></i> <span class="btn-text-mobile">复制</span>
+                        </button>
+                        <button class="btn-mini btn-del" title="删除" @click="openDeleteModal(item)">
+                            <i class="ri-delete-bin-line"></i> <span class="btn-text-mobile">删除</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="layer-subs" v-if="item.baidu || item.quark">
+                    <div class="sub-row" v-if="item.baidu">
+                        <div class="sub-icon baidu-color"><i class="ri-hard-drive-2-fill"></i> 百度</div>
+                        <div class="sub-status">
+                            <span class="status-dot" :class="item.baidu.status"></span>
+                            ${ item.baidu.status === 'normal' ? '正常' : '失效' }
+                        </div>
+                        <div class="sub-link">
+                            <span class="label">源:</span> 
+                            <a :href="item.baidu.source_link" target="_blank">链接</a>
+                        </div>
+                        <div class="sub-transfer"><i class="ri-arrow-right-line"></i></div>
+                        <div class="sub-code">
+                            ${ item.baidu.code ? '码: '+item.baidu.code : '无码' }
+                        </div>
+                        <div class="sub-link">
+                            <span class="label">现:</span>
+                            <a :href="item.baidu.current_link" target="_blank">链接</a>
+                        </div>
+                        <div class="sub-actions">
+                            <button class="text-btn update-btn" @click="updateSubTask(item, 'baidu')">更新</button>
+                            <button class="text-btn delete-btn" @click="deleteSubTask(item, 'baidu')">删除</button>
+                        </div>
+                    </div>
+
+                    <div class="sub-row" v-if="item.quark">
+                        <div class="sub-icon quark-color"><i class="ri-cloud-windy-fill"></i> 夸克</div>
+                        <div class="sub-status">
+                            <span class="status-dot" :class="item.quark.status"></span>
+                            ${ item.quark.status === 'normal' ? '正常' : '失效' }
+                        </div>
+                        <div class="sub-link">
+                            <span class="label">源:</span> 
+                            <a :href="item.quark.source_link" target="_blank">链接</a>
+                        </div>
+                        <div class="sub-transfer"><i class="ri-arrow-right-line"></i></div>
+                        <div class="sub-code">
+                            ${ item.quark.code ? '码: '+item.quark.code : '无码' }
+                        </div>
+                        <div class="sub-link">
+                            <span class="label">现:</span>
+                            <a :href="item.quark.current_link" target="_blank">链接</a>
+                        </div>
+                        <div class="sub-actions">
+                            <button class="text-btn update-btn" @click="updateSubTask(item, 'quark')">更新</button>
+                            <button class="text-btn delete-btn" @click="deleteSubTask(item, 'quark')">删除</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: modals.add }">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">添加监控资源</h3>
+                <span class="modal-close" @click="closeModals"><i class="ri-close-line"></i></span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>资源名称</label>
+                    <input type="text" v-model="addForm.name" placeholder="请输入剧名/电影名">
+                </div>
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label>优先级 (1-100)</label>
+                        <input type="number" v-model="addForm.priority">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label><i class="ri-hard-drive-2-fill" style="color:#06a7ff"></i> 百度网盘链接</label>
+                    <input type="text" v-model="addForm.baidu_link" placeholder="https://pan.baidu.com/s/...">
+                </div>
+                <div class="form-group">
+                    <label><i class="ri-cloud-windy-fill" style="color:#0099ff"></i> 夸克网盘链接</label>
+                    <input type="text" v-model="addForm.quark_link" placeholder="https://pan.quark.cn/s/...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" @click="closeModals">取消</button>
+                <button type="button" class="btn-primary" @click="submitAdd">确认添加</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: modals.edit }">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑资源</h3>
+                <span class="modal-close" @click="closeModals"><i class="ri-close-line"></i></span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>资源名称</label>
+                    <input type="text" v-model="editForm.name">
+                </div>
+                <div class="form-group">
+                    <label>优先级</label>
+                    <input type="number" v-model="editForm.priority">
+                </div>
+                <div class="divider-text">源链接修改 (留空不修改)</div>
+                <div class="form-group">
+                    <label>源百度网盘链接</label>
+                    <input type="text" v-model="editForm.baidu_link" :placeholder="editForm.baidu_placeholder">
+                </div>
+                <div class="form-group">
+                    <label>源夸克网盘链接</label>
+                    <input type="text" v-model="editForm.quark_link" :placeholder="editForm.quark_placeholder">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" @click="closeModals">取消</button>
+                <button type="button" class="btn-primary" @click="submitEdit">保存修改</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: modals.delete }">
+        <div class="modal-box modal-box-sm">
+            <div class="modal-header">
+                <h3 class="modal-title text-danger">删除监控</h3>
+                <span class="modal-close" @click="closeModals"><i class="ri-close-line"></i></span>
+            </div>
+            <div class="modal-body">
+                <p class="text-sub">确定要删除【${ deleteTargetName }】吗？<br>这将同时删除下属的所有网盘链接记录。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" @click="closeModals">取消</button>
+                <button type="button" class="btn-danger" @click="submitDelete">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* Vue 编译前隐藏 */
+    [v-cloak] { display: none; }
+
+    /* ================= 布局样式 ================= */
+    .monitor-list { display: flex; flex-direction: column; gap: 15px; }
+    
+    /* 电脑端表头 */
+    .list-header-row { 
+        display: flex; 
+        padding: 0 15px; 
+        color: #64748b; 
+        font-size: 13px; 
+        font-weight: 600; 
+        margin-bottom: -5px; 
+        gap: 10px; /* 关键：与 layer-main 保持一致的间距 */
+    }
+
+    .monitor-item { background: white; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; transition: box-shadow 0.2s; }
+    .monitor-item:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border-color: #cbd5e1; }
+
+    /* --- 第一层：主信息 --- */
+    .layer-main { display: flex; align-items: center; padding: 15px; background: #fff; border-bottom: 1px solid #f1f5f9; min-height: 70px; gap: 10px; }
+    
+    /* 组合容器 (方便手机端布局) */
+    .col-name-group { display: flex; align-items: center; flex: 2; gap: 8px; }
+    .col-data-group { display: flex; gap: 20px; align-items: center; }
+
+    /* 列定义 */
+    .col-id { width: 60px; color: #94a3b8; font-family: monospace; }
+    .col-name { display: flex; align-items: center; gap: 8px; font-weight: 600; color: #1e293b; font-size: 15px; }
+    .col-stats { width: 120px; display: flex; gap: 10px; color: #64748b; font-size: 13px; }
+    .col-info { width: 140px; font-size: 13px; }
+    
+    /* 对齐调整：在Header中也使用相同的宽度 */
+    .list-header-row .col-switch { justify-content: center; display: flex; }
+    .col-switch { width: 80px; display: flex; justify-content: center; }
+    
+    .list-header-row .col-actions { justify-content: flex-end; display: flex; }
+    .col-actions { width: 160px; display: flex; gap: 5px; justify-content: flex-end; }
+
+    /* 内部元素 */
+    .res-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+    .priority-tag { background: #fef3c7; color: #d97706; font-size: 11px; padding: 1px 5px; border-radius: 3px; font-weight: normal; white-space: nowrap; }
+    
+    .stat-box, .info-box { display: flex; align-items: center; gap: 3px; }
+    .text-latest { color: #2563eb; font-weight: 500; }
+    .text-time { color: #94a3b8; font-size: 12px; }
+
+    /* 移动端标签 (默认隐藏) */
+    .mobile-label { display: none; color: #64748b; font-weight: normal; font-size: 12px; margin-right: 4px; }
+    .btn-text-mobile { display: none; }
+
+    /* Toggle Switch */
+    .toggle-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: .4s; border-radius: 22px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #10b981; }
+    input:checked + .slider:before { transform: translateX(18px); }
+
+    /* Buttons */
+    .btn-mini { width: 32px; height: 32px; border: 1px solid #e2e8f0; background: #f8fafc; border-radius: 6px; cursor: pointer; color: #64748b; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+    .btn-mini:hover { background: #fff; border-color: #cbd5e1; color: #1e293b; }
+    .btn-run:hover { color: #10b981; border-color: #10b981; background: #ecfdf5; }
+    .btn-del:hover { color: #ef4444; border-color: #ef4444; background: #fef2f2; }
+
+    /* --- 第二层：子列表 --- */
+    .layer-subs { background: #f8fafc; padding: 5px 0; }
+    .sub-row { display: flex; align-items: center; padding: 8px 15px 8px 60px; font-size: 13px; color: #475569; border-bottom: 1px dashed #e2e8f0; }
+    .sub-row:last-child { border-bottom: none; }
+
+    .sub-icon { width: 80px; display: flex; align-items: center; gap: 5px; font-weight: 500; }
+    .sub-status { width: 80px; display: flex; align-items: center; gap: 5px; }
+    .sub-link { flex: 1; display: flex; gap: 5px; align-items: center; max-width: 200px; white-space: nowrap; overflow: hidden; }
+    .sub-transfer { width: 40px; text-align: center; color: #cbd5e1; }
+    .sub-code { width: 80px; font-family: monospace; color: #64748b; }
+    .sub-actions { margin-left: auto; display: flex; gap: 10px; }
+
+    .baidu-color { color: #06a7ff; }
+    .quark-color { color: #0099ff; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .status-dot.normal { background: #10b981; }
+    .status-dot.invalid { background: #ef4444; }
+    .sub-link a { color: #2563eb; text-decoration: underline; }
+
+    .text-btn { background: none; border: none; font-size: 12px; cursor: pointer; padding: 2px 5px; }
+    .update-btn { color: #2563eb; }
+    .delete-btn { color: #ef4444; }
+
+    /* Modal Styling (通用) */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 100; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-box { background: white; width: 500px; max-width: 90%; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 0; overflow: hidden; }
+    .modal-box-sm { width: 400px; }
+    .modal-header { padding: 15px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+    .modal-title { margin: 0; font-size: 16px; font-weight: 600; color: #1e293b; }
+    .modal-close { cursor: pointer; color: #94a3b8; font-size: 20px; }
+    .modal-body { padding: 20px; }
+    .modal-footer { padding: 15px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 500; color: #475569; }
+    .form-group input { width: 100%; padding: 8px 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+    .form-row { display: flex; gap: 15px; }
+    .form-group.half { flex: 1; }
+    .divider-text { font-size: 12px; color: #94a3b8; margin: 15px 0 10px; display: flex; align-items: center; }
+    .divider-text::after { content: ""; flex: 1; height: 1px; background: #e2e8f0; margin-left: 10px; }
+    .text-danger { color: #ef4444; }
+    .text-sub { color: #64748b; font-size: 14px; line-height: 1.5; }
+
+    /* ================= 移动端适配 (Card View) ================= */
+    @media (max-width: 768px) {
+        .panel-card{ padding: 15px; }
+        .content-body{ padding: 10px 5px; }
+        .list-header-row { display: none; } /* 隐藏全局表头 */
+        
+        /* 1. 卡片布局改为纵向 */
+        .layer-main { 
+            flex-direction: column; 
+            align-items: flex-start; 
+            padding: 15px; 
+            position: relative;
+            gap: 12px; 
+            height: auto;
+        }
+
+        /* 2. 名称与ID */
+        .col-name-group { width: 100%; padding-right: 50px; /* 留出开关位置 */ }
+        .res-name { max-width: none; white-space: normal; line-height: 1.4; }
+        .col-id { width: auto; font-size: 12px; margin-right: 5px; }
+        
+        /* 3. 开关：绝对定位到右上角 */
+        .col-switch { 
+            position: absolute; 
+            top: 15px; 
+            right: 15px; 
+            width: auto; 
+            display: flex; 
+            align-items: center;
+        }
+        
+        /* 4. 数据统计区域：显示标签 */
+        .col-data-group { 
+            width: 100%; 
+            flex-direction: column; 
+            align-items: flex-start; 
+            gap: 8px; 
+            background: #f8fafc; 
+            padding: 10px; 
+            border-radius: 6px;
+        }
+        .col-stats, .col-info { width: 100%; display: flex; justify-content: space-between; }
+        .stat-box, .info-box { width: 48%; } /* 两列排布 */
+
+        /* 显示移动端专用标签 */
+        .mobile-label { display: inline-block; }
+        
+        /* 5. 操作按钮：底部铺满 */
+        .col-actions { 
+            width: 100%; 
+            justify-content: space-between; 
+            border-top: 1px dashed #e2e8f0; 
+            padding-top: 12px; 
+            margin-top: 5px; 
+        }
+        .btn-mini { 
+            width: auto; 
+            flex: 1; 
+            margin: 0 3px; 
+            height: 36px; /* 更易点击 */
+            border-radius: 6px;
+            gap: 4px;
+        }
+        .btn-text-mobile { display: inline; font-size: 12px; } /* 显示按钮文字 */
+
+        /* --- 子列表适配 --- */
+        .sub-row { 
+            flex-wrap: wrap; 
+            padding: 10px 15px; 
+            gap: 8px; 
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .sub-icon { width: 100%; font-weight: bold; margin-bottom: 2px; }
+        .sub-status { width: auto; margin-right: 15px; }
+        .sub-transfer { display: none; }
+        .sub-link { min-width: 45%; flex: 1; }
+        .sub-actions { 
+            width: 100%; 
+            justify-content: flex-end; 
+            margin-top: 5px; 
+            padding-top: 8px; 
+            border-top: 1px dashed #e2e8f0; 
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+
+<script>
+    const serverData = {{ updates | tojson }};
+
+    new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            items: serverData,
+            modals: { add: false, edit: false, delete: false },
+            addForm: { name: '', priority: 50, baidu_link: '', quark_link: '' },
+            editForm: { id: null, name: '', priority: 0, baidu_link: '', quark_link: '', baidu_placeholder: '', quark_placeholder: '' },
+            deleteTargetId: null, deleteTargetName: ''
+        },
+        methods: {
+            closeModals() { this.modals.add = false; this.modals.edit = false; this.modals.delete = false; },
+            openAddModal() { this.addForm = { name: '', priority: 50, baidu_link: '', quark_link: '' }; this.modals.add = true; },
+            submitAdd() {
+                if(!this.addForm.name) return alert('请输入资源名称');
+                this.items.unshift({
+                    id: Date.now(), name: this.addForm.name, priority: this.addForm.priority,
+                    check_count: 0, transfer_count: 0, latest: 'New', last_check: '刚刚', is_monitoring: true,
+                    baidu: this.addForm.baidu_link ? { status: 'normal', source_link: this.addForm.baidu_link, code: '', current_link: '' } : null,
+                    quark: this.addForm.quark_link ? { status: 'normal', source_link: this.addForm.quark_link, code: '', current_link: '' } : null
+                });
+                this.closeModals();
+            },
+            openEditModal(item) {
+                this.editForm = { id: item.id, name: item.name, priority: item.priority, baidu_link: '', quark_link: '', baidu_placeholder: item.baidu ? item.baidu.source_link : '无', quark_placeholder: item.quark ? item.quark.source_link : '无' };
+                this.modals.edit = true;
+            },
+            submitEdit() {
+                const item = this.items.find(i => i.id === this.editForm.id);
+                if (item) { item.name = this.editForm.name; item.priority = this.editForm.priority; }
+                this.closeModals();
+            },
+            openDeleteModal(item) { this.deleteTargetId = item.id; this.deleteTargetName = item.name; this.modals.delete = true; },
+            submitDelete() { this.items = this.items.filter(i => i.id !== this.deleteTargetId); this.closeModals(); },
+            toggleMonitor(item) { console.log('Toggle:', item.id); },
+            runTask(item) { alert('执行任务: ' + item.name); },
+            copyLink(id) {
+                const link = `http://yoursite.com/s/${id}`;
+                const el = document.createElement('textarea');
+                el.value = link;
+                document.body.appendChild(el);
+                el.select();
+                document.execCommand('copy');
+                document.body.removeChild(el);
+                alert('复制成功: ' + link);
+            },
+            updateSubTask(item, type) { alert(`更新 ${item.name} 的 ${type} 链接`); },
+            deleteSubTask(item, type) {
+                if(confirm(`确定移除 ${type === 'baidu' ? '百度' : '夸克'} 网盘链接吗？`)) {
+                    item[type] = null;
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

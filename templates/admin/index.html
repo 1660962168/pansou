@@ -1,206 +1,140 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+{% extends "admin/base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>基德资源站 - 后台管理系统</title>
-    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='admin/css/base.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
-</head>
-<body>
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo-box">
-                <i class="ri-cloud-windy-fill"></i>
-                <span>管理后台</span>
+{% block title %}基德资源站 - 数据统计{% endblock %}
+
+{% block page_title %}仪表盘 / 数据统计{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">总资源数</span>
+                <div class="stat-icon bg-blue"><i class="ri-database-2-fill"></i></div>
+            </div>
+            <div class="stat-value">12,854</div>
+            <div class="stat-change text-up"><i class="ri-arrow-up-line"></i> 较昨日 +124</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">今日转存</span>
+                <div class="stat-icon bg-green"><i class="ri-check-double-line"></i></div>
+            </div>
+            <div class="stat-value">856</div>
+            <div class="stat-change text-up"><i class="ri-arrow-up-line"></i> 自动运行中</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">待处理需求</span>
+                <div class="stat-icon bg-orange"><i class="ri-discuss-line"></i></div>
+            </div>
+            <div class="stat-value">42</div>
+            <div class="stat-change text-down"><i class="ri-time-line"></i> 需要关注</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">系统负载</span>
+                <div class="stat-icon bg-purple"><i class="ri-pulse-line"></i></div>
+            </div>
+            <div class="stat-value">12%</div>
+            <div class="stat-change text-up" style="color:#64748b">运行良好</div>
+        </div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">每月流量统计</div>
+            <div style="font-size: 13px; color: #64748b;">
+                <span style="display:inline-block; width:10px; height:10px; background:#2563eb; margin-right:5px; border-radius:2px;"></span>本月
+                <span style="display:inline-block; width:10px; height:10px; background:#cbd5e1; margin-right:5px; margin-left:10px; border-radius:2px;"></span>其他月份
             </div>
         </div>
-        <nav class="sidebar-menu">
-            <div class="menu-label">数据中心</div>
-            <a href="#" class="menu-item active">
-                <i class="ri-dashboard-line"></i>
-                <span>数据统计</span>
-            </a>
-            <div class="menu-label">资源管理</div>
-            <a href="#" class="menu-item"><i class="ri-folder-transfer-line"></i><span>批量转存</span></a>
-            <a href="#" class="menu-item"><i class="ri-history-line"></i><span>转存记录</span></a>
-            <a href="#" class="menu-item"><i class="ri-calendar-check-line"></i><span>每日更新</span></a>
-            <a href="#" class="menu-item"><i class="ri-eye-line"></i><span>监控转存</span></a>
-            <div class="menu-label">系统管理</div>
-            <a href="#" class="menu-item"><i class="ri-message-3-line"></i><span>需求管理</span></a>
-            <a href="#" class="menu-item"><i class="ri-settings-3-line"></i><span>网站配置</span></a>
-            <a href="#" class="menu-item"><i class="ri-shield-keyhole-line"></i><span>系统配置</span></a>
-            <div style="margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 10px;">
-                <a href="/" class="menu-item" style="color: #64748b;">
-                    <i class="ri-logout-box-r-line"></i>
-                    <span>返回首页</span>
-                </a>
-            </div>
-        </nav>
-    </aside>
-    <main class="main-content">
-        <header class="top-header">
-            <div class="page-title">仪表盘 / 数据统计</div>
-            <div class="user-actions">
-                <div class="action-btn"><i class="ri-lock-password-line"></i> 修改密码</div>
-                <div class="action-btn" onclick="location.href='/logout'" style="color: #ef4444;"><i class="ri-shut-down-line"></i> 退出登录</div>
-            </div>
-        </header>
-        <div class="content-body">
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">总资源数</span>
-                        <div class="stat-icon bg-blue"><i class="ri-database-2-fill"></i></div>
-                    </div>
-                    <div class="stat-value">12,854</div>
-                    <div class="stat-change text-up"><i class="ri-arrow-up-line"></i> 较昨日 +124</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">今日转存</span>
-                        <div class="stat-icon bg-green"><i class="ri-check-double-line"></i></div>
-                    </div>
-                    <div class="stat-value">856</div>
-                    <div class="stat-change text-up"><i class="ri-arrow-up-line"></i> 自动运行中</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">待处理需求</span>
-                        <div class="stat-icon bg-orange"><i class="ri-discuss-line"></i></div>
-                    </div>
-                    <div class="stat-value">42</div>
-                    <div class="stat-change text-down"><i class="ri-time-line"></i> 需要关注</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-header">
-                        <span class="stat-title">系统负载</span>
-                        <div class="stat-icon bg-purple"><i class="ri-pulse-line"></i></div>
-                    </div>
-                    <div class="stat-value">12%</div>
-                    <div class="stat-change text-up" style="color:#64748b">运行良好</div>
-                </div>
-            </div>
-            <div class="panel-card">
-                <div class="panel-header">
-                    <div class="panel-title">每月流量统计</div>
-                    <div style="font-size: 13px; color: #64748b;">
-                        <span style="display:inline-block; width:10px; height:10px; background:#2563eb; margin-right:5px; border-radius:2px;"></span>本月
-                        <span style="display:inline-block; width:10px; height:10px; background:#cbd5e1; margin-right:5px; margin-left:10px; border-radius:2px;"></span>其他月份
-                    </div>
-                </div>
-                <div id="monthChart" style="width: 100%; height: 300px;"></div>
-            </div>
-            <div class="panel-card">
-                <div class="panel-header">
-                    <div class="panel-title">流量分析 (近7天)</div>
-                    <div style="font-size: 13px; color: #64748b;">
-                        <span style="display:inline-block; width:10px; height:10px; background:#2563eb; margin-right:5px; border-radius:2px;"></span>今日
-                        <span style="display:inline-block; width:10px; height:10px; background:#cbd5e1; margin-right:5px; margin-left:10px; border-radius:2px;"></span>历史
-                    </div>
-                </div>
-                <div id="visitChart" style="width: 100%; height: 300px;"></div>
+        <div id="monthChart" style="width: 100%; height: 300px;"></div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">流量分析 (近7天)</div>
+            <div style="font-size: 13px; color: #64748b;">
+                <span style="display:inline-block; width:10px; height:10px; background:#2563eb; margin-right:5px; border-radius:2px;"></span>今日
+                <span style="display:inline-block; width:10px; height:10px; background:#cbd5e1; margin-right:5px; margin-left:10px; border-radius:2px;"></span>历史
             </div>
         </div>
-    </main>
-    <script>
-        // 菜单点击切换
-        const menuItems = document.querySelectorAll('.menu-item');
-        menuItems.forEach(item => {
-            item.addEventListener('click', function () {
-                if (this.getAttribute('href') !== '#') return;
-                menuItems.forEach(i => i.classList.remove('active'));
-                this.classList.add('active');
-                const text = this.querySelector('span').innerText;
-                document.querySelector('.page-title').innerText = `仪表盘 / ${text}`;
-            });
-        });
+        <div id="visitChart" style="width: 100%; height: 300px;"></div>
+    </div>
+</div>
+{% endblock %}
 
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
         // --- ECharts 图表逻辑 ---
-        document.addEventListener('DOMContentLoaded', function() {
-            
-            // 1. 每月流量图表 (Highight Current Month)
-            var monthChart = echarts.init(document.getElementById('monthChart'));
-            
-            // 获取当前月份 (0-11)
-            var currentMonthIndex = new Date().getMonth(); 
-            var monthsData = [12000, 14500, 11000, 16000, 21000, 28000, 26000, 23000, 25000, 29000, 32000, 35000];
-            
-            // 构造颜色数据：本月深蓝，其他灰
-            var monthColors = monthsData.map((_, index) => {
-                return index === currentMonthIndex ? 
-                    { value: _, itemStyle: { color: '#2563eb' } } : // 高亮色
-                    { value: _, itemStyle: { color: '#cbd5e1' } };  // 普通色
-            });
-
-            var monthOption = {
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                grid: { left: '2%', right: '2%', bottom: '3%', top: '10%', containLabel: true },
-                xAxis: [{
-                    type: 'category',
-                    data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
-                    axisTick: { alignWithLabel: true },
-                    axisLine: { lineStyle: { color: '#94a3b8' } }
-                }],
-                yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } }],
-                series: [{
-                    name: '月访问量',
-                    type: 'bar',
-                    barWidth: '50%',
-                    data: monthColors, // 使用带样式的 data
-                    itemStyle: { borderRadius: [4, 4, 0, 0] }
-                }]
-            };
-            monthChart.setOption(monthOption);
-
-
-            // 2. 每日流量图表 (Highight Today) - 去掉平均趋势
-            var visitChart = echarts.init(document.getElementById('visitChart'));
-            
-            // 获取今天是周几 (0是周日, 1-6是周一到周六)
-            var dayOfWeek = new Date().getDay(); 
-            // 转换成数组索引 (假设图表是 周一 到 周日, 索引 0-6)
-            var todayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-
-            var weekData = [1200, 1450, 1100, 1600, 2100, 2800, 2600];
-            
-            // 构造颜色数据：今日深蓝，其他灰
-            var dayColors = weekData.map((_, index) => {
-                return index === todayIndex ? 
-                    { value: _, itemStyle: { color: '#2563eb' } } : 
-                    { value: _, itemStyle: { color: '#cbd5e1' } };
-            });
-
-            var visitOption = {
-                tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-                grid: { left: '2%', right: '2%', bottom: '3%', top: '10%', containLabel: true },
-                xAxis: [{
-                    type: 'category',
-                    data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-                    axisTick: { alignWithLabel: true },
-                    axisLine: { lineStyle: { color: '#94a3b8' } }
-                }],
-                yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } }],
-                series: [{
-                    name: '每日访问',
-                    type: 'bar',
-                    barWidth: '40%',
-                    data: dayColors, // 使用高亮逻辑的数据
-                    itemStyle: { borderRadius: [4, 4, 0, 0] }
-                }]
-            };
-            visitChart.setOption(visitOption);
-
-
-            // 监听窗口大小变化
-            window.addEventListener('resize', function() {
-                monthChart.resize();
-                visitChart.resize();
-            });
+        
+        // 1. 每月流量图表
+        var monthChart = echarts.init(document.getElementById('monthChart'));
+        var currentMonthIndex = new Date().getMonth(); 
+        var monthsData = [12000, 14500, 11000, 16000, 21000, 28000, 26000, 23000, 25000, 29000, 32000, 35000];
+        
+        var monthColors = monthsData.map((_, index) => {
+            return index === currentMonthIndex ? 
+                { value: _, itemStyle: { color: '#2563eb' } } : 
+                { value: _, itemStyle: { color: '#cbd5e1' } };
         });
-    </script>
-</body>
 
-</html>
+        var monthOption = {
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            grid: { left: '2%', right: '2%', bottom: '3%', top: '10%', containLabel: true },
+            xAxis: [{
+                type: 'category',
+                data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                axisTick: { alignWithLabel: true },
+                axisLine: { lineStyle: { color: '#94a3b8' } }
+            }],
+            yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } }],
+            series: [{
+                name: '月访问量',
+                type: 'bar',
+                barWidth: '50%',
+                data: monthColors,
+                itemStyle: { borderRadius: [4, 4, 0, 0] }
+            }]
+        };
+        monthChart.setOption(monthOption);
+
+        // 2. 每日流量图表
+        var visitChart = echarts.init(document.getElementById('visitChart'));
+        var dayOfWeek = new Date().getDay(); 
+        var todayIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        var weekData = [1200, 1450, 1100, 1600, 2100, 2800, 2600];
+        
+        var dayColors = weekData.map((_, index) => {
+            return index === todayIndex ? 
+                { value: _, itemStyle: { color: '#2563eb' } } : 
+                { value: _, itemStyle: { color: '#cbd5e1' } };
+        });
+
+        var visitOption = {
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            grid: { left: '2%', right: '2%', bottom: '3%', top: '10%', containLabel: true },
+            xAxis: [{
+                type: 'category',
+                data: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                axisTick: { alignWithLabel: true },
+                axisLine: { lineStyle: { color: '#94a3b8' } }
+            }],
+            yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } }],
+            series: [{
+                name: '每日访问',
+                type: 'bar',
+                barWidth: '40%',
+                data: dayColors,
+                itemStyle: { borderRadius: [4, 4, 0, 0] }
+            }]
+        };
+        visitChart.setOption(visitOption);
+
+        window.addEventListener('resize', function() {
+            monthChart.resize();
+            visitChart.resize();
+        });
+    });
+</script>
+{% endblock %}

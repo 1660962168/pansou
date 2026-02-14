@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}基德资源站 - 后台管理系统{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='admin/css/base.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+    {% block head_extra %}{% endblock %}
+</head>
+
+<body>
+    <aside id="sidebar-app" class="sidebar" v-cloak @mouseenter="lockSidebar">
+        <div class="sidebar-header">
+            <div class="logo-box">
+                <i class="ri-cloud-windy-fill"></i>
+                <span>管理后台</span>
+            </div>
+        </div>
+        <nav class="sidebar-menu">
+            <div class="menu-label">数据中心</div>
+
+            <a href="{{ url_for('admin.index') }}"
+                class="menu-item {% if request.endpoint == 'admin.index' %}active{% endif %}"
+                @click="checkClick($event)">
+                <i class="ri-dashboard-line"></i>
+                <span>数据统计</span>
+            </a>
+
+            <div class="menu-label">资源管理</div>
+            <a href="{{ url_for('admin.daily_updates') }}"
+                class="menu-item {% if request.endpoint == 'admin.daily_updates' %}active{% endif %}"
+                @click="checkClick($event)">
+                <i class="ri-calendar-check-line"></i>
+                <span>每日更新</span>
+            </a>
+            <a href="{{ url_for('admin.batch_transfer') }}"
+                class="menu-item {% if request.endpoint == 'admin.batch_transfer' %}active{% endif %}"
+                @click="checkClick($event)">
+                <i class="ri-folder-transfer-line"></i>
+                <span>批量转存</span>
+            </a>
+            <a href="{{ url_for('admin.transfer_records') }}"
+                class="menu-item {% if request.endpoint == 'admin.transfer_records' %}active{% endif %}"
+                @click="checkClick($event)">
+                <i class="ri-history-line"></i>
+                <span>转存记录</span>
+            </a>
+
+            <div class="menu-label">系统管理</div>
+            <a href="{{ url_for('admin.requirements')}}"
+                class="menu-item {% if request.endpoint == 'admin.requirements' %}active{% endif %}"
+                @click="checkClick($event)">
+                <i class="ri-message-3-line"></i>
+                <span>需求管理</span>
+            </a>
+            <a href="{{url_for('admin.system_config')}}"
+                class="menu-item {% if request.endpoint == 'admin.system_config' %}active{% endif %}"
+                @click="checkClick($event)">
+                <i class="ri-shield-keyhole-line"></i>
+                <span>系统配置</span>
+            </a>
+            <a href="{{ url_for('admin.website_config') }}"
+                class="menu-item {% if request.endpoint == 'admin.website_config' %}active{% endif %}"
+                @click="checkClick($event)">
+                <i class="ri-settings-3-line"></i>
+                <span>网站配置</span>
+            </a>
+
+            <div style="margin-top: 20px; border-top: 1px solid #f1f5f9; padding-top: 10px;">
+                <a href="/" class="menu-item" style="color: #64748b;" @click="checkClick($event)">
+                    <i class="ri-logout-box-r-line"></i>
+                    <span>返回首页</span>
+                </a>
+            </div>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <header class="top-header">
+            <div class="page-title">{% block page_title %}仪表盘 / 数据统计{% endblock %}</div>
+            <div class="user-actions">
+                <div class="action-btn" onclick="location.href='{{ url_for('admin.change_password') }}'">
+                    <i class="ri-lock-password-line"></i> 修改密码
+                </div>
+                <div class="action-btn" onclick="location.href='/logout'" style="color: #ef4444;">
+                    <i class="ri-shut-down-line"></i> 退出登录
+                </div>
+            </div>
+        </header>
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        new Vue({
+            el: '#sidebar-app',
+            delimiters: ['${', '}'], // 防止与 Jinja2 冲突
+            data: {
+                isLocked: false, // 是否处于锁定状态
+                lockTimer: null
+            },
+            methods: {
+                // 当鼠标移入侧边栏时触发
+                lockSidebar() {
+                    // 1. 立即上锁
+                    this.isLocked = true;
+
+                    // 2. 清除之前的定时器（防止快速抖动）
+                    if (this.lockTimer) clearTimeout(this.lockTimer);
+
+                    // 3. 设置解锁时间（300ms 大约为动画时长）
+                    // 在这 300ms 内，所有点击都会被 checkClick 拦截
+                    this.lockTimer = setTimeout(() => {
+                        this.isLocked = false;
+                    }, 300);
+                },
+
+                // 链接点击拦截器
+                checkClick(event) {
+                    // 如果处于锁定状态，阻止默认跳转
+                    if (this.isLocked) {
+                        event.preventDefault(); // 阻止 href 跳转
+                        console.log('点击被拦截：侧边栏动画中...');
+                        return false;
+                    }
+                    // 否则，放行，允许正常跳转
+                }
+            }
+        });
+    </script>
+
+    <style>
+        /* 防止 Vue 加载前闪烁 */
+        [v-cloak] {
+            display: none;
+        }
+    </style>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

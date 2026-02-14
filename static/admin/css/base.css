@@ -51,17 +51,23 @@
      display: flex;
      flex-direction: column;
      z-index: 50;
-     transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+     transition: transform 0.2s ease-out, margin-left 0.2s ease-out;
      white-space: nowrap;
      overflow: hidden;
  }
-
+.sidebar.animating .sidebar-menu a,
+.sidebar.animating .user-actions {
+    pointer-events: none; /* 禁止响应鼠标点击 */
+    cursor: default;      /* 鼠标样式变为默认，不显示小手 */
+}
  .sidebar-header {
      height: var(--header-height);
      display: flex;
      align-items: center;
      padding: 0 20px;
      border-bottom: 1px solid var(--border-color);
+     justify-self: center;
+     justify-content: center;
  }
 
  .logo-box {
@@ -170,7 +176,7 @@
      font-size: 14px;
      color: var(--text-sub);
      display: flex;
-     align-items: center;
+     align-items: baseline;
      cursor: pointer;
      transition: color 0.2s;
  }
@@ -180,7 +186,7 @@
  }
 
  .content-body {
-     padding: 30px;
+     padding: 20px;
      flex: 1;
  }
 
@@ -306,6 +312,9 @@
  }
 
  @media (max-width: 768px) {
+    .content-body{
+        padding: 10px;
+    }
      .sidebar {
          width: 68px;
      }
@@ -389,3 +398,52 @@
          padding: 0 12px;
      }
  }
+
+ /* --- 通用按钮样式 (Base Buttons) --- */
+.btn-primary, .btn-secondary, .btn-danger {
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    transition: all 0.2s;
+    outline: none;
+    line-height: 1.5;
+}
+
+/* 蓝色主按钮 */
+.btn-primary {
+    background-color: #2563eb;
+    color: white;
+}
+.btn-primary:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+
+/* 白色次级按钮 (带边框) */
+.btn-secondary {
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+}
+.btn-secondary:hover {
+    background-color: #f8fafc;
+    border-color: #94a3b8;
+    color: #334155;
+}
+
+/* 红色危险按钮 */
+.btn-danger {
+    background-color: #ef4444;
+    color: white;
+}
+.btn-danger:hover {
+    background-color: #dc2626;
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.2);
+}

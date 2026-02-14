@@ -1,0 +1,225 @@
+{% extends "admin/base.html" %}
+
+{% block title %}网站配置 - 后台管理{% endblock %}
+{% block page_title %}系统管理 / 网站配置{% endblock %}
+
+{% block content %}
+<div id="app" class="content-body" v-cloak>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">网站全局设置</div>
+        </div>
+
+        <div class="panel-body">
+            <form @submit.prevent="saveConfig" class="config-form">
+                
+                <div class="config-section">
+                    <div class="section-title">
+                        <i class="ri-computer-line"></i> 基础信息
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>网站名称</label>
+                            <input type="text" v-model="form.site_name" placeholder="请输入网站名称">
+                        </div>
+                        <div class="form-group half">
+                            <label>网站标语 (Slogan)</label>
+                            <input type="text" v-model="form.site_slogan" placeholder="例如：极速、纯净的资源分享站">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>网站域名 (URL)</label>
+                        <input type="text" v-model="form.site_url" placeholder="https://...">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Logo 图片地址</label>
+                        <div class="input-group-preview">
+                            <input type="text" v-model="form.logo_url">
+                            <div class="img-preview-box" title="Logo预览">
+                                <img :src="form.logo_url" alt="Logo" onerror="this.style.display='none'">
+                            </div>
+                            <button type="button" class="btn-secondary btn-upload" @click="mockUpload">上传</button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>浏览器图标 (Favicon)</label>
+                        <div class="input-group-preview">
+                            <input type="text" v-model="form.favicon_url">
+                            <div class="img-preview-box sm" title="Favicon预览">
+                                <img :src="form.favicon_url" alt="Icon" onerror="this.style.display='none'">
+                            </div>
+                            <button type="button" class="btn-secondary btn-upload" @click="mockUpload">上传</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <div class="config-section">
+                    <div class="section-title">
+                        <i class="ri-seo-line"></i> SEO 搜索引擎优化
+                    </div>
+
+                    <div class="form-group">
+                        <label>首页标题 (Title)</label>
+                        <input type="text" v-model="form.seo_title">
+                        <div class="helper-text">建议格式：网站名称 - 主要关键词</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>关键词 (Keywords)</label>
+                        <textarea v-model="form.seo_keywords" rows="3" placeholder="用英文逗号分隔，例如：电影,下载,网盘"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>网站描述 (Description)</label>
+                        <textarea v-model="form.seo_description" rows="4" placeholder="简要介绍网站提供的服务和内容..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions-sticky">
+                    <button type="submit" class="btn-primary" :disabled="loading">
+                        <span v-if="loading"><i class="ri-loader-4-line spin-icon"></i> 保存中...</span>
+                        <span v-else><i class="ri-save-3-line"></i> 保存所有设置</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+    [v-cloak] { display: none; }
+
+    /* 让面板内容垂直排列 */
+    .panel-body { padding: 30px; }
+
+    /* 区块标题 */
+    .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-left: 10px;
+        border-left: 4px solid #2563eb; /* 左侧蓝条装饰 */
+        line-height: 1;
+    }
+    .section-title i { font-size: 18px; color: #2563eb; }
+
+    /* 分割线 */
+    .section-divider {
+        height: 1px;
+        background-color: #f1f5f9;
+        margin: 40px 0;
+    }
+
+    /* 表单控件 */
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+    .form-group input[type="text"], textarea { 
+        width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; 
+        box-sizing: border-box; transition: border 0.2s; background: #fff;
+    }
+    .form-group input:focus, textarea:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    
+    .form-row { display: flex; gap: 20px; }
+    .form-group.half { flex: 1; }
+    .helper-text { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+
+    /* 图片预览组件 */
+    .input-group-preview { display: flex; align-items: center; gap: 10px; }
+    .img-preview-box { 
+        width: 42px; height: 42px; 
+        border: 1px solid #e2e8f0; border-radius: 6px; 
+        background: #f8fafc; 
+        display: flex; align-items: center; justify-content: center; 
+        overflow: hidden; flex-shrink: 0;
+    }
+    .img-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .img-preview-box.sm { padding: 8px; } /* Favicon 留白多一点 */
+    .btn-upload { padding: 0 15px; height: 42px; white-space: nowrap; }
+
+    /* 底部按钮区域 */
+    .form-actions-sticky {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: flex-start; /* 按钮靠左 */
+    }
+    .btn-primary { 
+        padding: 10px 30px; 
+        background: #2563eb; color: white; border: none; border-radius: 6px; 
+        font-size: 14px; font-weight: 500; cursor: pointer; 
+        display: inline-flex; align-items: center; gap: 5px;
+        transition: all 0.2s;
+    }
+    .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+    .btn-secondary { background: white; border: 1px solid #cbd5e1; color: #475569; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spin-icon { animation: spin 1s linear infinite; }
+
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+        .content-body{
+            padding: 10px !important;
+        }
+        .panel-body { padding: 0px; }
+        .form-row { flex-direction: column; gap: 0; }
+        .btn-primary { width: 100%; justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+<script>
+    const serverConfig = {{ config | tojson }};
+
+    new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            form: serverConfig,
+            loading: false
+        },
+        methods: {
+            async saveConfig() {
+                this.loading = true;
+                try {
+                    const res = await fetch('/admin/website-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.form)
+                    });
+                    const data = await res.json();
+                    if(data.success) {
+                        alert('网站配置已保存！');
+                    } else {
+                        alert('保存失败');
+                    }
+                } catch(e) {
+                    alert('网络请求错误');
+                } finally {
+                    this.loading = false;
+                }
+            },
+            mockUpload() {
+                alert('点击了上传按钮 (需对接后端上传接口)');
+            }
+        }
+    });
+</script>
+{% endblock %}

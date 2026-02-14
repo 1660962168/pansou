@@ -46,4 +46,5 @@ if __name__ == '__main__':
     server = Server(app.wsgi_app)
     server.watch('templates/*.html')
     server.watch('static/*.*')
-    server.serve(port=5000)
+    # 开放0.0.0.0
+    server.serve(port=5000, host='0.0.0.0')

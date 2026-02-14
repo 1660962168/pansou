@@ -1,0 +1,286 @@
+{% extends "admin/base.html" %}
+
+{% block title %}需求管理 - 后台管理{% endblock %}
+{% block page_title %}系统管理 / 需求管理{% endblock %}
+
+{% block content %}
+<div id="app" class="content-body" v-cloak>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">
+                用户需求列表
+                <span class="badge-count" v-if="unreadCount > 0">${ unreadCount } 条未读</span>
+            </div>
+            <button class="btn-secondary" @click="markAllRead" v-if="unreadCount > 0">
+                <i class="ri-check-double-line"></i> 全部已读
+            </button>
+        </div>
+
+        <div class="demand-list">
+            <div class="empty-tip" v-if="items.length === 0">暂无需求数据</div>
+
+            <div 
+                class="demand-item" 
+                v-for="(item, index) in items" 
+                :key="item.id"
+                :class="{ 'read-item': item.is_read }"
+            >
+                <div class="d-status">
+                    <span class="dot"></span>
+                </div>
+                <div class="d-content-box" @click="openViewModal(item)">
+                    <div class="d-text">${ item.content }</div>
+                    <div class="d-time">
+                        <i class="ri-time-line"></i> ${ item.time }
+                    </div>
+                </div>
+                <div class="d-actions">
+                    <button class="btn-primary" @click="openViewModal(item)">查看</button>
+                    <button class="btn-danger" @click="openDeleteModal(item)">删除</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="pagination-container" v-if="items.length > 0">
+            <span class="pagination-info">共 ${ items.length } 条</span>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: modals.view }">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3 class="modal-title">需求详情</h3>
+                <span class="modal-close" @click="closeModals"><i class="ri-close-line"></i></span>
+            </div>
+            <div class="modal-body">
+                <div class="detail-meta">
+                    <span class="meta-item"><i class="ri-calendar-line"></i> 提交时间：${ currentItem.time }</span>
+                    <span class="meta-item"><i class="ri-hashtag"></i> ID：${ currentItem.id }</span>
+                </div>
+                <div class="detail-content">
+                    ${ currentItem.content }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-primary" @click="closeModals">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: modals.delete }">
+        <div class="modal-box modal-box-sm">
+            <div class="modal-header">
+                <h3 class="modal-title text-danger">删除需求</h3>
+                <span class="modal-close" @click="closeModals"><i class="ri-close-line"></i></span>
+            </div>
+            <div class="modal-body">
+                <p class="text-sub">确定要删除这条需求记录吗？此操作无法撤销。</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" @click="closeModals">取消</button>
+                <button type="button" class="btn-danger" @click="confirmDelete">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+    [v-cloak] { display: none; }
+
+    /* 顶部标题栏 */
+    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .badge-count { background: #ef4444; color: white; font-size: 12px; padding: 2px 8px; border-radius: 10px; margin-left: 10px; font-weight: normal; vertical-align: middle; }
+
+    /* 列表样式 */
+    /* templates/admin/requirements.html */
+
+/* 找到原有的 .demand-list 样式并替换为以下内容 */
+.demand-list { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+    
+    /* --- 新增滚动样式 --- */
+    height: 70vh;        /* 设置固定高度 (根据需求可调整，如 calc(100vh - 140px) 会更精准适配屏幕) */
+    overflow-y: auto;    /* 内容超出时显示垂直滚动条 */
+    padding-right: 8px;  /* 给滚动条留出一点空隙，防止内容紧贴滚动条 */
+    padding: 0px 10px;
+}
+
+/* 可选：美化滚动条 (Webkit内核浏览器，如Chrome/Edge/Safari) */
+.demand-list::-webkit-scrollbar {
+    width: 6px;
+}
+.demand-list::-webkit-scrollbar-track {
+    background: transparent; 
+}
+.demand-list::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+}
+.demand-list::-webkit-scrollbar-thumb:hover {
+    background-color: #94a3b8;
+}
+    
+    .demand-item {
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        transition: all 0.2s;
+        cursor: pointer; /* 整个卡片可点 */
+    }
+    .demand-item:hover {
+        border-color: #2563eb;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+    }
+
+    /* 状态点 */
+    .d-status { display: flex; align-items: center; }
+    .d-status .dot { width: 8px; height: 8px; background: #2563eb; border-radius: 50%; display: block; }
+
+    /* 内容区域 */
+    .d-content-box { flex: 1; min-width: 0; } /* min-width: 0 修复 flex 子元素截断失效的问题 */
+    .d-text {
+        font-size: 15px; color: #1e293b; font-weight: 500; margin-bottom: 6px;
+        /* 多行截断 CSS */
+        display: -webkit-box;
+        -webkit-line-clamp: 2; /* 显示2行 */
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.5;
+    }
+    .d-time { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+
+    /* 操作按钮 */
+    .d-actions { display: flex; gap: 10px; opacity: 0.8; }
+    .demand-item:hover .d-actions { opacity: 1; }
+
+    /* === 已读样式 (变为灰色) === */
+    .demand-item.read-item {
+        background: #f8fafc; /* 背景变灰 */
+        border-color: #f1f5f9;
+    }
+    .demand-item.read-item .d-text { color: #64748b; font-weight: 400; } /* 文字变灰变细 */
+    .demand-item.read-item .d-time { color: #cbd5e1; }
+    .demand-item.read-item .d-status .dot { background: #cbd5e1; } /* 状态点变灰 */
+    
+    /* 详情弹窗样式 */
+    .detail-meta { background: #f8fafc; padding: 10px 15px; border-radius: 6px; margin-bottom: 15px; display: flex; gap: 20px; font-size: 13px; color: #64748b; }
+    .detail-content { font-size: 15px; line-height: 1.6; color: #334155; white-space: pre-wrap; /* 保留换行 */ min-height: 100px; }
+    .meta-item { display: flex; align-items: center; gap: 5px; }
+
+    /* 模态框通用 */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 100; display: none; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease; }
+    .modal-overlay.show { display: flex; opacity: 1; }
+    .modal-box { background: white; width: 600px; max-width: 90%; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+    .modal-box-sm { width: 400px; }
+    .modal-header { padding: 15px 20px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
+    .modal-title { font-size: 16px; font-weight: 600; color: #1e293b; margin: 0; }
+    .modal-close { cursor: pointer; color: #94a3b8; font-size: 20px; }
+    .modal-body { padding: 20px; }
+    .modal-footer { padding: 15px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc; }
+
+    /* 按钮复用 */
+    .btn-primary, .btn-secondary, .btn-danger { padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; border: none; transition: 0.2s; }
+    .btn-primary { background: #2563eb; color: white; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-secondary { background: white; border: 1px solid #cbd5e1; color: #64748b; }
+    .btn-secondary:hover { background: #f8fafc; color: #334155; }
+    .btn-danger { background: #ef4444; color: white; }
+    .btn-danger:hover { background: #dc2626; }
+    
+    .text-sub { color: #64748b; line-height: 1.5; margin: 0; }
+    .pagination-container { margin-top: 20px; text-align: right; color: #94a3b8; font-size: 13px; }
+    .detail-content{
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 15px;
+    }
+
+    @media (max-width: 768px) {
+        .content-body{
+            padding: 10px !important;
+        }
+        .panel-card{
+            padding: 13px;
+        }
+        .demand-list{
+            padding: 0;
+            padding-right: 10px;
+        }
+        .d-actions { flex-direction: column; gap: 5px; }
+        .btn-primary, .btn-danger { width: 100%; padding: 8px; }
+        .demand-item { align-items: flex-start;  }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+<script>
+    const serverData = {{ demands | tojson }};
+
+    new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            items: serverData,
+            modals: {
+                view: false,
+                delete: false
+            },
+            currentItem: {} // 当前选中的项（用于详情展示或删除）
+        },
+        computed: {
+            // 计算未读数量
+            unreadCount() {
+                return this.items.filter(i => !i.is_read).length;
+            }
+        },
+        methods: {
+            closeModals() {
+                this.modals.view = false;
+                this.modals.delete = false;
+            },
+
+            // --- 查看详情 ---
+            openViewModal(item) {
+                this.currentItem = item;
+                this.modals.view = true;
+                
+                // 标记为已读
+                if (!item.is_read) {
+                    item.is_read = true;
+                    // TODO: 发送 AJAX 请求到后端更新数据库状态
+                    // fetch('/admin/requirements/read/' + item.id, { method: 'POST' });
+                }
+            },
+
+            // --- 删除逻辑 ---
+            openDeleteModal(item) {
+                this.currentItem = item;
+                this.modals.delete = true;
+            },
+            confirmDelete() {
+                // 从列表中移除
+                this.items = this.items.filter(i => i.id !== this.currentItem.id);
+                this.closeModals();
+                // TODO: 发送 AJAX 请求到后端删除
+            },
+
+            // --- 全部已读 ---
+            markAllRead() {
+                this.items.forEach(item => item.is_read = true);
+            }
+        }
+    });
+</script>
+{% endblock %}

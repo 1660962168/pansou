@@ -1,0 +1,273 @@
+{% extends "admin/base.html" %}
+
+{% block title %}转存记录 - 后台管理{% endblock %}
+
+{% block page_title %}资源管理 / 转存记录{% endblock %}
+
+{% block content %}
+<div class="content-body" style="padding: 6px;">
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">历史转存任务</div>
+            <div class="filter-box">
+                <input type="text" placeholder="搜索文件名..." class="search-input">
+                <button class="search-btn">搜索</button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th width="60">ID</th>
+                        <th>资源名称</th>
+                        <th width="100">来源</th>
+                        <th width="100">大小</th>
+                        <th width="100">状态</th>
+                        <th width="160">时间</th>
+                        <th width="100">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in records %}
+                    <tr>
+                        <td data-label="ID">
+                            <span class="id-badge">#{{ item.id }}</span>
+                        </td>
+                        <td data-label="资源名称" class="name-cell">
+                            <div class="file-name">{{ item.name }}</div>
+                        </td>
+                        <td data-label="来源网盘">
+                            {% if '百度' in item.source %}
+                                <span class="badge badge-blue">百度网盘</span>
+                            {% elif '夸克' in item.source %}
+                                <span class="badge badge-orange">夸克网盘</span>
+                            {% endif %}
+                        </td>
+                        <td data-label="文件大小" style="color: #64748b;">{{ item.size }}</td>
+                        <td data-label="状态">
+                            {% if item.status == 'success' %}
+                                <span class="status-box status-success">
+                                    <i class="ri-checkbox-circle-fill"></i> 成功
+                                </span>
+                            {% elif item.status == 'processing' %}
+                                <span class="status-box status-processing">
+                                    <i class="ri-loader-4-line spin-icon"></i> 进行中
+                                </span>
+                            {% elif item.status == 'failed' %}
+                                <span class="status-box status-failed">
+                                    <i class="ri-close-circle-fill"></i> 失败
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td data-label="处理时间" style="color: #94a3b8; font-size: 13px;">{{ item.time }}</td>
+                        <td data-label="操作" class="action-cell">
+                            {% if item.status == 'failed' %}
+                                <a href="#" class="btn-link btn-link-danger">重试</a>
+                            {% else %}
+                                <a href="#" class="btn-link">详情</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="pagination-container">
+            <span class="pagination-info">共 5 条记录</span>
+            <div class="pagination-btns">
+                <button disabled class="page-btn disabled"><</button>
+                <button class="page-btn active">1</button>
+                <button class="page-btn">2</button>
+                <button class="page-btn">></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* --- 基础样式 --- */
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap; /* 允许换行 */
+        gap: 15px;
+    }
+    
+    .filter-box {
+        display: flex;
+        gap: 10px;
+    }
+
+    .search-input {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 13px;
+        width: 200px;
+        transition: border-color 0.2s;
+    }
+    .search-input:focus { border-color: #2563eb; }
+
+    .search-btn {
+        padding: 8px 16px;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    .table-responsive { width: 100%; }
+    
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
+    
+    .data-table th {
+        text-align: left;
+        padding: 12px 16px;
+        background-color: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    
+    .data-table td {
+        padding: 16px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    
+    .file-name { font-weight: 500; color: #1e293b; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .id-badge { color: #94a3b8; font-family: monospace; }
+    
+    /* 状态与徽章 */
+    .badge { padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; display: inline-block; }
+    .badge-blue { background: #eff6ff; color: #2563eb; }
+    .badge-red { background: #fef2f2; color: #ef4444; }
+    .badge-orange { background: #fff7ed; color: #f97316; }
+    .badge-gray { background: #f1f5f9; color: #64748b; }
+
+    .status-box { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; }
+    .status-success { color: #10b981; }
+    .status-processing { color: #3b82f6; }
+    .status-failed { color: #ef4444; }
+
+    .btn-link { color: #2563eb; font-size: 13px; text-decoration: none; }
+    .btn-link-danger { color: #f97316; }
+    .sep { color: #e2e8f0; margin: 0 5px; }
+
+    /* 分页 */
+    .pagination-container { margin-top: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 15px; color: #64748b; font-size: 13px; flex-wrap: wrap; }
+    .pagination-btns { display: flex; gap: 5px; }
+    .page-btn { padding: 4px 10px; border: 1px solid #e2e8f0; background: white; border-radius: 4px; cursor: pointer; color: #64748b; }
+    .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+    .page-btn.disabled { background: #f8fafc; color: #cbd5e1; cursor: not-allowed; }
+
+    /* 动画 */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spin-icon { animation: spin 1.5s linear infinite; }
+
+    /* =========================================
+       移动端适配 (Max-width: 768px)
+       ========================================= */
+    @media (max-width: 768px) {
+        /* 1. 头部筛选栏调整 */
+        .filter-box { width: 100%; }
+        .search-input { width: 100%; } /* 输入框占满 */
+
+        /* 2. 表格变卡片核心代码 */
+        .data-table thead { display: none; } /* 隐藏表头 */
+        
+        .data-table tbody, .data-table tr, .data-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .data-table tr {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 15px; /* 卡片间距 */
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            padding: 15px;
+            position: relative; /* 方便绝对定位 */
+        }
+
+        /* 移除原有的 td 边框和 padding */
+        .data-table td {
+            border-bottom: none;
+            padding: 5px 0;
+            text-align: right; /* 内容靠右 */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* 使用 data-label 显示左侧列名 */
+        .data-table td::before {
+            content: attr(data-label);
+            float: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        /* --- 特殊列处理 --- */
+
+        /* 资源名称：作为卡片标题，加粗并置顶 */
+        .data-table td.name-cell {
+            text-align: left;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #f1f5f9;
+            margin-bottom: 10px;
+            display: block; /* 独占一行 */
+        }
+        .data-table td.name-cell::before { display: none; } /* 不显示 "资源名称" 字样 */
+        .file-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e293b;
+            white-space: normal; /* 允许换行 */
+            max-width: 100%;
+            line-height: 1.4;
+        }
+
+        /* ID：可以隐藏，或者缩小显示在右上角 */
+        .data-table td[data-label="ID"] {
+            display: none; /* 手机端通常不需要看 ID，或者你可以选择显示 */
+        }
+
+        /* 操作列：放在底部，加大点击区域 */
+        .data-table td.action-cell {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed #f1f5f9;
+            justify-content: flex-end; /* 按钮靠右 */
+            gap: 15px;
+        }
+        .data-table td.action-cell::before { display: none; } /* 不显示 "操作" 字样 */
+        
+        .btn-link {
+            padding: 6px 12px;
+            background: #f8fafc;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        
+        /* 分页调整 */
+        .pagination-container {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}

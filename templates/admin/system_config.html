@@ -1,0 +1,248 @@
+{% extends "admin/base.html" %}
+
+{% block title %}系统配置 - 后台管理{% endblock %}
+{% block page_title %}系统管理 / 系统配置{% endblock %}
+
+{% block content %}
+<div id="app" class="content-body" v-cloak>
+    <div class="panel-card config-layout">
+        
+        <div class="config-sidebar">
+            <div class="nav-title">设置项</div>
+            <div class="nav-item" :class="{ active: currentTab === 'netdisk' }" @click="currentTab = 'netdisk'">
+                <i class="ri-hard-drive-2-line"></i> 网盘接口
+            </div>
+            <div class="nav-item" :class="{ active: currentTab === 'search' }" @click="currentTab = 'search'">
+                <i class="ri-search-eye-line"></i> 搜索服务
+            </div>
+            <div class="nav-item" :class="{ active: currentTab === 'network' }" @click="currentTab = 'network'">
+                <i class="ri-global-line"></i> 任务设置
+            </div>
+        </div>
+
+        <div class="config-content">
+            <div class="config-header">
+                <h3>${ tabTitle }</h3>
+                <p class="desc">${ tabDesc }</p>
+            </div>
+
+            <form @submit.prevent="saveConfig">
+                
+                <div v-show="currentTab === 'netdisk'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label>百度网盘 Cookie (BDUSS)</label>
+                        <textarea v-model="form.baidu_cookie" rows="3" placeholder="在此粘贴 BDUSS..."></textarea>
+                        <div class="helper-text">用于自动转存和链接检测。请定期检查是否失效。</div>
+                    </div>
+                    <div class="form-group">
+                        <label>百度 User-Agent</label>
+                        <input type="text" v-model="form.baidu_ua" placeholder="netdisk;7.0.3.2;PC;...">
+                    </div>
+                    <div class="divider"></div>
+                    <div class="form-group">
+                        <label>夸克网盘 Cookie</label>
+                        <textarea v-model="form.quark_cookie" rows="3" placeholder="在此粘贴夸克 Cookie..."></textarea>
+                    </div>
+                    <div class="test-area">
+                        <button type="button" class="btn-secondary btn-sm" @click="testConnection('baidu')">
+                            <i class="ri-plug-line"></i> 测试百度连通性
+                        </button>
+                        <button type="button" class="btn-secondary btn-sm" @click="testConnection('quark')">
+                            <i class="ri-plug-line"></i> 测试夸克连通性
+                        </button>
+                    </div>
+                </div>
+
+                <div v-show="currentTab === 'search'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label>外部搜索 API 地址</label>
+                        <input type="text" v-model="form.search_api_url" placeholder="http://api.example.com/v1/search">
+                    </div>
+                    <div class="form-group">
+                        <label>API 密钥 (Token)</label>
+                        <div class="input-wrapper">
+                            <input :type="showToken ? 'text' : 'password'" v-model="form.search_api_token">
+                            <i class="eye-btn" :class="showToken ? 'ri-eye-line' : 'ri-eye-off-line'" @click="showToken = !showToken"></i>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>请求超时 (秒)</label>
+                            <input type="number" v-model="form.search_timeout">
+                        </div>
+                    </div>
+                </div>
+
+                <div v-show="currentTab === 'network'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label>自动监控间隔 (分钟)</label>
+                        <input type="number" v-model="form.task_interval" min="10">
+                        <div class="helper-text">“每日更新”任务自动检查资源的频率。建议不要低于10分钟，避免IP被封。</div>
+                    </div>
+                </div>
+
+                <div class="config-footer">
+                    <button type="submit" class="btn-primary" :disabled="loading">
+                        <span v-if="loading"><i class="ri-loader-4-line spin-icon"></i> 保存中...</span>
+                        <span v-else><i class="ri-save-3-line"></i> 保存系统配置</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+    [v-cloak] { display: none; }
+
+    .config-layout {
+        display: flex;
+        min-height: 600px;
+        padding: 0; /* 清除 panel-card 默认 padding */
+        overflow: hidden;
+    }
+
+    /* === 左侧导航 === */
+    .config-sidebar {
+        width: 240px;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        padding: 20px 0;
+        flex-shrink: 0;
+    }
+    .nav-title {
+        font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
+        padding: 0 24px; margin-bottom: 10px;
+    }
+    .nav-item {
+        padding: 12px 24px;
+        font-size: 14px; color: #475569;
+        cursor: pointer;
+        display: flex; align-items: center; gap: 10px;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+    }
+    .nav-item i { font-size: 18px; color: #94a3b8; }
+    .nav-item:hover { background: #f1f5f9; color: #1e293b; }
+    .nav-item.active { background: white; color: #2563eb; border-left-color: #2563eb; font-weight: 500; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+    .nav-item.active i { color: #2563eb; }
+
+    /* === 右侧内容 === */
+    .config-content {
+        flex: 1;
+        padding: 40px;
+        display: flex; flex-direction: column;
+        background: #fff;
+    }
+
+    .config-header { margin-bottom: 30px; border-bottom: 1px solid #f1f5f9; padding-bottom: 20px; }
+    .config-header h3 { font-size: 20px; color: #1e293b; margin: 0 0 8px 0; }
+    .config-header .desc { color: #64748b; font-size: 14px; margin: 0; }
+
+    /* 表单控件 */
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+    .form-group input[type="text"], 
+    .form-group input[type="number"], 
+    .form-group input[type="password"] {
+        width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: border 0.2s;
+    }
+    .form-group textarea {
+        width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: monospace; resize: vertical; box-sizing: border-box; line-height: 1.4; color: #334155;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: #2563eb; outline: none; }
+    
+    .helper-text { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+    .divider { height: 1px; background: #f1f5f9; margin: 24px 0; }
+    .form-row { display: flex; gap: 20px; }
+    .form-group.half { flex: 1; }
+
+    /* Input with Icon */
+    .input-wrapper { position: relative; }
+    .eye-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; }
+    
+    /* 底部按钮 */
+    .config-footer { margin-top: auto; padding-top: 30px; border-top: 1px solid #f1f5f9; }
+    
+    .test-area { display: flex; gap: 10px; margin-top: 10px; }
+    .btn-sm { font-size: 12px; padding: 6px 12px; }
+
+    /* 动画 */
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* 手机适配 */
+    @media (max-width: 768px) {
+        .config-layout { flex-direction: column; }
+        .config-sidebar { width: 100%; display: flex; overflow-x: auto; border-right: none; border-bottom: 1px solid #e2e8f0; padding: 10px; }
+        .nav-title { display: none; }
+        .nav-item { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; padding: 10px 15px; }
+        .nav-item.active { border-left: none; border-bottom-color: #2563eb; background: none; box-shadow: none; }
+        .config-content { padding: 20px; }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+<script>
+    const serverConfig = {{ config | tojson }};
+
+    new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            currentTab: 'netdisk',
+            form: serverConfig,
+            showToken: false,
+            loading: false
+        },
+        computed: {
+            tabTitle() {
+                const map = {
+                    'netdisk': '网盘接口配置',
+                    'search': '搜索服务配置',
+                    'network': '任务设置'
+                };
+                return map[this.currentTab];
+            },
+            tabDesc() {
+                const map = {
+                    'netdisk': '配置百度网盘和夸克网盘的 Cookie 凭证，用于资源有效性检测及自动转存。',
+                    'search': '配置第三方搜索 API 接口，用于聚合搜索资源。',
+                    'network': '配置系统后台任务调度频率，控制自动更新节奏。'
+                };
+                return map[this.currentTab];
+            }
+        },
+        methods: {
+            async saveConfig() {
+                this.loading = true;
+                try {
+                    const res = await fetch('/admin/system-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.form)
+                    });
+                    const data = await res.json();
+                    if(data.success) {
+                        alert('配置保存成功！');
+                    } else {
+                        alert('保存失败：' + data.message);
+                    }
+                } catch(e) {
+                    alert('网络请求错误');
+                } finally {
+                    this.loading = false;
+                }
+            },
+            testConnection(type) {
+                alert(`正在测试 ${type} 连通性...\n(此处应调用后端测试接口)`);
+                // 实际开发中调用后端接口：fetch('/admin/test-connection', ...)
+            }
+        }
+    });
+</script>
+{% endblock %}
