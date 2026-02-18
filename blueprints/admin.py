@@ -10,7 +10,7 @@ def index():
 
 @bp.route('/login')
 def login():
-    return render_template('admin/logn.html')
+    return render_template('admin/login.html')
 
 @bp.route('/batch-transfer')
 def batch_transfer():
