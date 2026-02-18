@@ -3,7 +3,7 @@ import config
 from exts import db
 from blueprints.admin import bp as admin_bp
 from livereload import Server # 测试用
-import models
+from models import Admin
 
 
 
@@ -13,8 +13,22 @@ app.register_blueprint(admin_bp)
 db.init_app(app)
 
 
+def init_admin():
+    try:
+        admin = Admin.query.filter_by(username='admin').first()
+        if not admin:
+            print("Detected no admin account. Creating default admin...")
+            new_admin = Admin(username='admin')
+            new_admin.password = 'admin123'  # 默认密码，请登录后修改
+            db.session.add(new_admin)
+            db.session.commit()
+            print("Default admin created: username='admin', password='admin123'")
+    except Exception as e:
+        print(f"Database error during init: {e}")
+
 with app.app_context():
     db.create_all()
+    init_admin() # 调用初始化函数
 
 @app.route('/')
 def index():
@@ -42,9 +56,8 @@ def search():
 
 
 if __name__ == '__main__':
-    app.debug = True
     server = Server(app.wsgi_app)
     server.watch('templates/*.html')
     server.watch('static/*.*')
     # 开放0.0.0.0
-    server.serve(port=5000, host='0.0.0.0')
+    server.serve(port=5000)

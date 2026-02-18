@@ -1,22 +1,121 @@
-from flask import Blueprint, render_template,request, jsonify, session
-from werkzeug.security import check_password_hash, generate_password_hash
-from exts import db
+from flask import Blueprint, render_template, request, session, redirect, url_for, flash, make_response,g
+from functools import wraps
+from models import Admin
+from config import SECRET_KEY
+
 bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+def login_required(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not session.get('admin_id'):
+            return redirect(url_for('admin.login'))
+        return func(*args, **kwargs)
+    return wrapper
+
+@bp.before_request
+def load_logged_in_user():
+    user_id = session.get('admin_id')
+    if user_id is None:
+        g.admin = None
+    else:
+        g.admin = Admin.query.get(user_id)
+
+
 
 # 访问路径: /admin/
 @bp.route('/')
+@login_required
 def index():
     return render_template('admin/index.html')
 
-@bp.route('/login')
+@bp.route('/login', methods=['GET', 'POST'])
 def login():
-    return render_template('admin/login.html')
+    # 1. 如果 Session 有效，直接进后台 (实现了"30天内有效")
+    if session.get('admin_id'):
+        return redirect(url_for('admin.index'))
+
+    if request.method == 'GET':
+        # 从 Cookie 中尝试获取上次登录的用户名
+        last_username = request.cookies.get('remember_user', '')
+        return render_template('admin/login.html', username=last_username)
+
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        remember = request.form.get('remember') # 这里的 remember 是 checkbox 的值
+
+        admin = Admin.query.filter_by(username=username).first()
+
+        if admin and admin.check_password(password):
+            session.clear()
+            session['admin_id'] = admin.id
+            
+            # --- 核心逻辑：30天免登录 ---
+            if remember:
+                # 勾选了：Session 有效期遵循 config 中的 PERMANENT_SESSION_LIFETIME (30天)
+                session.permanent = True
+            else:
+                # 没勾选：浏览器关闭即失效
+                session.permanent = False
+            
+            # --- 构建响应 ---
+            response = make_response(redirect(url_for('admin.index')))
+            
+            # --- 额外功能：记住用户名 ---
+            # 无论是否勾选"记住我"，都把用户名存个 Cookie，方便下次登录自动填账号
+            # max_age 设置为 30 天 (单位秒)
+            if remember:
+                 response.set_cookie('remember_user', username, max_age=30*24*60*60)
+            else:
+                 # 如果没勾选记住我，可以选择删除这个 cookie，或者仅设为会话级
+                 response.delete_cookie('remember_user')
+
+            flash('欢迎回来，管理员！', 'success')
+            return response
+        
+        flash('用户名或密码错误。', 'error')
+        return redirect(url_for('admin.login'))
+
+@bp.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('admin.login'))
+
+@bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    """
+    通过验证 config.py 中的 SECRET_KEY 来重置密码
+    """
+    username = request.form.get('username')
+    input_key = request.form.get('secret_key')
+    new_password = request.form.get('new_password')
+    
+    if input_key != SECRET_KEY:
+        flash('Secret Key 错误，无法重置密码！', 'error')
+        return redirect(url_for('admin.login'))
+    
+    # 2. 查找并更新用户
+    admin = Admin.query.filter_by(username=username).first()
+    if not admin:
+        flash(f'用户 {username} 不存在！', 'error')
+        return redirect(url_for('admin.login'))
+        
+    # 3. 执行重置
+    admin.password = new_password # 触发 model 的 setter 进行加密
+    db.session.commit()
+    
+    flash('密码重置成功，请使用新密码登录。', 'success')
+    return redirect(url_for('admin.login'))
+
 
 @bp.route('/batch-transfer')
+@login_required
 def batch_transfer():
     return render_template('admin/batch_transfer.html')
 
 @bp.route('/transfer-records')
+@login_required
 def transfer_records():
     mock_records = [
         {'id': 1024, 'name': '流浪地球2.The.Wandering.Earth.II.2023.4K.mp4', 'source': '百度网盘', 'status': 'success', 'size': '12.5 GB', 'time': '2023-10-27 14:23:45'},
@@ -28,6 +127,7 @@ def transfer_records():
     return render_template('admin/transfer_records.html', records=mock_records)
 
 @bp.route('/daily-updates')
+@login_required
 def daily_updates():
     # --- 模拟数据 ---
     mock_updates = [
@@ -74,6 +174,7 @@ def daily_updates():
     return render_template('admin/daily_updates.html', updates=mock_updates)
 
 @bp.route('/requirements')
+@login_required
 def requirements():
     # --- 模拟需求数据 ---
     mock_demands = [
@@ -142,6 +243,7 @@ def requirements():
     return render_template('admin/requirements.html', demands=mock_demands)
 
 @bp.route('/change-password', methods=['GET', 'POST'])
+@login_required
 def change_password():
     # GET 请求：渲染页面
     if request.method == 'GET':
@@ -149,6 +251,7 @@ def change_password():
     
 
 @bp.route('/system-config', methods=['GET', 'POST'])
+@login_required
 def system_config():
     if request.method == 'GET':
         # --- 模拟从数据库读取的配置 ---
@@ -177,6 +280,7 @@ def system_config():
 
 
 @bp.route('/website-config', methods=['GET', 'POST'])
+@login_required
 def website_config():
     if request.method == 'GET':
         # --- 模拟网站配置数据 ---
