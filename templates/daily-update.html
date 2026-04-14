@@ -1,0 +1,169 @@
+{% extends 'index_base.html' %}
+
+{% block title %}{{ site_config.site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/daily-update.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="daily-layout">
+
+    <div class="daily-main">
+        <div class="daily-search-wrapper">
+            <div class="daily-search-box">
+                <input type="text" placeholder="输入剧名即可，无需添加「第x季」" v-model="globalKw" @keyup.enter="goSearch()">
+                <button @click="goSearch()">搜索</button>
+            </div>
+        </div>
+
+        <div class="segment-tabs">
+            <div class="segment-tab-item active" onclick="switchDailyTab('tv')">电视剧</div>
+            <div class="segment-tab-item" onclick="switchDailyTab('movie')">电影</div>
+        </div>
+        <div class="list-hint">
+            点击右侧网盘图标获取链接 <i class="ri-arrow-down-line"></i> <i class="ri-arrow-down-line"></i>
+        </div>
+        <div class="daily-tv-list" id="daily-tv-list">
+            {% if tv_list %}
+            {% for item in tv_list %}
+            <div class="resource-item" id="resource-{{ item.id }}">
+                <div class="res-info">
+                    <div class="res-row">
+                        <span class="res-title">{{ item.name }}</span>
+                    </div>
+                </div>
+               <div class="res-actions">
+                {% if item.quark_current_link %}
+                <div class="icon-btn icon-quark" @click="showDirectShareDialog('{{ item.name }}', '夸克网盘', '{{ item.quark_current_link }}', '{{ item.quark_pwd }}')">
+                    <img src="{{ url_for('static', filename='images/quark.svg') }}" alt="">
+                </div>
+                {% endif %}
+
+                {% if item.baidu_current_link %}
+                <div class="icon-btn icon-cloud" @click="showDirectShareDialog('{{ item.name }}', '百度网盘', '{{ item.baidu_current_link }}', '{{ item.baidu_pwd }}')">
+                    <img src="{{ url_for('static', filename='images/baidu.svg') }}" alt="">
+                </div>
+                {% endif %}
+            </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="text-align: center; padding: 20px; color: #94a3b8; width: 100%;">暂无内容</div>
+            {% endif %}
+        </div>
+
+        <div class="daily-movie-list" id="daily-movie-list" style="display: none;">
+            {% if movie_list %}
+            {% for item in movie_list %}
+            <div class="resource-item" id="resource-{{ item.id }}">
+                <div class="res-info">
+                    <div class="res-row">
+                        <span class="res-title">{{ item.name }}</span>
+                    </div>
+                </div>
+                <div class="res-actions">
+                {% if item.quark_current_link %}
+                <div class="icon-btn icon-quark" @click="showDirectShareDialog('{{ item.name }}', '夸克网盘', '{{ item.quark_current_link }}', '{{ item.quark_pwd }}')">
+                    <img src="{{ url_for('static', filename='images/quark.svg') }}" alt="">
+                </div>
+                {% endif %}
+
+                {% if item.baidu_current_link %}
+                <div class="icon-btn icon-cloud" @click="showDirectShareDialog('{{ item.name }}', '百度网盘', '{{ item.baidu_current_link }}', '{{ item.baidu_pwd }}')">
+                    <img src="{{ url_for('static', filename='images/baidu.svg') }}" alt="">
+                </div>
+                {% endif %}
+            </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div style="text-align: center; padding: 20px; color: #94a3b8; width: 100%;">暂无内容</div>
+            {% endif %}
+        </div>
+
+        <div class="bottom-search-btn-wrapper">
+            <div class="bottom-hint-text">结果不满意？试试全网搜，覆盖更全</div>
+            <button class="full-search-btn" @click="goToSearch">全网搜「更多资源」</button>
+        </div>
+    </div>
+
+    <div class="daily-sidebar">
+        {% if ranking_dict %}
+            {% for cat_name, items in ranking_dict.items() %}
+            <div class="sidebar-card">
+                <div class="sidebar-header">{{ cat_name }}</div>
+                {% for item in items[:5] %}
+                <div class="hot-list-item" onclick="window.location.href='/search?kw={{ item.title }}'" style="cursor: pointer;">
+                    <div class="hot-rank-num">{{ item.rank }}</div>
+                    <div>{{ item.title }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="sidebar-card">
+                <div class="sidebar-header">热门榜单</div>
+                <div style="text-align: center; padding: 20px; color: #94a3b8;">暂无榜单数据</div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab 切换逻辑
+    function switchDailyTab(type) {
+        const tabs = document.querySelectorAll('.segment-tab-item');
+        const tvList = document.getElementById('daily-tv-list');
+        const movieList = document.getElementById('daily-movie-list');
+
+        if (type === 'tv') {
+            tabs[0].classList.add('active');
+            tabs[1].classList.remove('active');
+            tvList.style.display = 'block';
+            movieList.style.display = 'none';
+        } else {
+            tabs[0].classList.remove('active');
+            tabs[1].classList.add('active');
+            tvList.style.display = 'none';
+            movieList.style.display = 'block';
+        }
+    }
+
+    // 自动高亮底部导航栏的 "每日更新" 图标
+    document.addEventListener("DOMContentLoaded", function () {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab');
+        const targetId = params.get('id');
+
+        // 如果你有标签切换功能，在这里模拟点击触发
+        if (tab) {
+            // 例：document.querySelector(`.tab-btn[data-type="${tab}"]`)?.click();
+        }
+
+        // 锚点平滑滚动与高亮
+        if (targetId) {
+            // 延迟300毫秒，等待 DOM 渲染与图片完全加载完毕
+            setTimeout(() => {
+                const targetEl = document.getElementById('resource-' + targetId);
+                if (targetEl) {
+                    // 将元素滚动到屏幕中央
+                    targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                    // 触发高亮闪烁效果
+                    const originalBg = targetEl.style.backgroundColor;
+                    targetEl.style.transition = 'background-color 0.8s ease';
+                    targetEl.style.backgroundColor = '#e0f2fe'; // 使用浅蓝色强调
+
+                    // 2秒后褪色恢复原状
+                    setTimeout(() => {
+                        targetEl.style.backgroundColor = originalBg;
+                    }, 2000);
+                }
+            }, 300);
+        }
+    });
+</script>
+{% endblock %}

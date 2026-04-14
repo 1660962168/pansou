@@ -1,0 +1,290 @@
+{% extends "admin/base.html" %}
+
+{% block title %}网站配置 - 后台管理{% endblock %}
+{% block page_title %}系统管理 / 网站配置{% endblock %}
+
+{% block content %}
+<div id="app" class="content-body" v-cloak>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">网站全局设置</div>
+        </div>
+
+        <div class="panel-body">
+            <form @submit.prevent="saveConfig" class="config-form">
+                
+                <input type="file" ref="logoInput" accept=".png,.jpg,.jpeg,.svg" style="display:none" @change="handleFileChange($event, 'logo')">
+                <input type="file" ref="faviconInput" accept=".ico,.png" style="display:none" @change="handleFileChange($event, 'favicon')">
+
+                <div class="config-section">
+                    <div class="section-title">
+                        <i class="ri-computer-line"></i> 基础信息
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>网站名称</label>
+                            <input type="text" v-model="form.site_name" placeholder="请输入网站名称" required>
+                        </div>
+                        <div class="form-group half">
+                            <label>网站标语 (Slogan)</label>
+                            <input type="text" v-model="form.site_slogan" placeholder="例如：极速、纯净的资源分享站">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Logo 图片</label>
+                        <div class="input-group-preview">
+                            <input type="text" v-model="form.logo_path" readonly placeholder="点击右侧上传按钮选择图片">
+                            
+                            <div class="img-preview-box" title="Logo预览">
+                                <img :src="preview.logo || form.logo_path" alt="Logo" onerror="this.style.display='none'" style="display: block;">
+                            </div>
+                            <button type="button" class="btn-secondary btn-upload" @click="triggerUpload('logo')">
+                                <i class="ri-upload-cloud-2-line"></i> 上传
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>浏览器图标 (Favicon)</label>
+                        <div class="input-group-preview">
+                            <input type="text" v-model="form.favicon_path" readonly placeholder="建议上传 .ico 或 32x32 png">
+                            
+                            <div class="img-preview-box sm" title="Favicon预览">
+                                <img :src="preview.favicon || form.favicon_path" alt="Icon" onerror="this.style.display='none'" style="display: block;">
+                            </div>
+                            <button type="button" class="btn-secondary btn-upload" @click="triggerUpload('favicon')">
+                                <i class="ri-upload-cloud-2-line"></i> 上传
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider"></div>
+
+                <div class="config-section">
+                    <div class="section-title">
+                        <i class="ri-seo-line"></i> SEO 搜索引擎优化
+                    </div>
+
+                    <div class="form-group">
+                        <label>首页标题 (Title)</label>
+                        <input type="text" v-model="form.seo_title">
+                        <div class="helper-text">建议格式：网站名称 - 主要关键词</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>关键词 (Keywords)</label>
+                        <textarea v-model="form.seo_keywords" rows="3" placeholder="用英文逗号分隔，例如：电影,下载,网盘"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>网站描述 (Description)</label>
+                        <textarea v-model="form.seo_description" rows="4" placeholder="简要介绍网站提供的服务和内容..."></textarea>
+                    </div>
+                </div>
+
+                <div class="form-actions-sticky">
+                    <button type="submit" class="btn-primary" :disabled="loading">
+                        <span v-if="loading"><i class="ri-loader-4-line spin-icon"></i> 保存中...</span>
+                        <span v-else><i class="ri-save-3-line"></i> 保存所有设置</span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<style>
+    [v-cloak] { display: none; }
+
+    /* 让面板内容垂直排列 */
+    .panel-body { padding: 30px; }
+
+    /* 区块标题 */
+    .section-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-left: 10px;
+        border-left: 4px solid #2563eb; /* 左侧蓝条装饰 */
+        line-height: 1;
+    }
+    .section-title i { font-size: 18px; color: #2563eb; }
+
+    /* 分割线 */
+    .section-divider {
+        height: 1px;
+        background-color: #f1f5f9;
+        margin: 40px 0;
+    }
+
+    /* 表单控件 */
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; color: #475569; margin-bottom: 8px; }
+    .form-group input[type="text"], textarea { 
+        width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; 
+        box-sizing: border-box; transition: border 0.2s; background: #fff;
+    }
+    .form-group input:focus, textarea:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+    
+    .form-row { display: flex; gap: 20px; }
+    .form-group.half { flex: 1; }
+    .helper-text { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+
+    /* 图片预览组件 */
+    .input-group-preview { display: flex; align-items: center; gap: 10px; }
+    .img-preview-box { 
+        width: 42px; height: 42px; 
+        border: 1px solid #e2e8f0; border-radius: 6px; 
+        background: #f8fafc; 
+        display: flex; align-items: center; justify-content: center; 
+        overflow: hidden; flex-shrink: 0;
+    }
+    .img-preview-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .img-preview-box.sm { padding: 8px; } /* Favicon 留白多一点 */
+    .btn-upload { padding: 0 15px; height: 42px; white-space: nowrap; display: flex; align-items: center; gap: 5px;}
+
+    /* 底部按钮区域 */
+    .form-actions-sticky {
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: flex-start; /* 按钮靠左 */
+    }
+    .btn-primary { 
+        padding: 10px 30px; 
+        background: #2563eb; color: white; border: none; border-radius: 6px; 
+        font-size: 14px; font-weight: 500; cursor: pointer; 
+        display: inline-flex; align-items: center; gap: 5px;
+        transition: all 0.2s;
+    }
+    .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); }
+    .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; }
+    .btn-secondary { background: white; border: 1px solid #cbd5e1; color: #475569; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .btn-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spin-icon { animation: spin 1s linear infinite; }
+
+    /* 移动端适配 */
+    @media (max-width: 768px) {
+        .content-body{
+            padding: 10px !important;
+        }
+        .panel-body { padding: 0px; }
+        .form-row { flex-direction: column; gap: 0; }
+        .btn-primary { width: 100%; justify-content: center; }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+<script>
+    // 注入后端配置数据（如果字段不存在给默认空值）
+    const serverConfig = {
+        site_name: "{{ config.site_name or '' }}",
+        site_slogan: "{{ config.site_slogan or '' }}",
+        logo_path: "{{ config.logo_path or '' }}",
+        favicon_path: "{{ config.favicon_path or '' }}",
+        seo_title: "{{ config.seo_title or '' }}",
+        seo_keywords: "{{ config.seo_keywords or '' }}",
+        seo_description: `{{ config.seo_description or '' }}` // 使用反引号防止换行报错
+    };
+
+    new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            form: serverConfig,
+            files: {
+                logo: null,
+                favicon: null
+            },
+            preview: {
+                logo: null,
+                favicon: null
+            },
+            loading: false
+        },
+        methods: {
+            // 触发隐藏的文件输入框
+            triggerUpload(type) {
+                if(type === 'logo') {
+                    this.$refs.logoInput.click();
+                } else {
+                    this.$refs.faviconInput.click();
+                }
+            },
+            // 处理文件选择与预览
+            handleFileChange(event, type) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // 1. 保存文件对象，准备提交
+                this.files[type] = file;
+                
+                // 2. 创建本地预览 URL (立即显示图片)
+                const previewUrl = URL.createObjectURL(file);
+                this.preview[type] = previewUrl;
+
+                // 3. 更新输入框文字提示
+                if(type === 'logo') this.form.logo_path = "已选择: " + file.name;
+                if(type === 'favicon') this.form.favicon_path = "已选择: " + file.name;
+            },
+            async saveConfig() {
+                this.loading = true;
+                try {
+                    // 使用 FormData 构建提交数据
+                    // 这样可以同时包含 文本字段 和 文件对象
+                    const formData = new FormData();
+
+                    // 添加所有文本字段
+                    for (const key in this.form) {
+                        formData.append(key, this.form[key]);
+                    }
+
+                    // 添加文件 (如果有新选择的文件)
+                    if (this.files.logo) {
+                        formData.append('logo_file', this.files.logo);
+                    }
+                    if (this.files.favicon) {
+                        formData.append('favicon_file', this.files.favicon);
+                    }
+
+                    // 发送请求 (无需指定 Content-Type，浏览器会自动识别为 multipart/form-data)
+                    const res = await fetch('/admin/website-config', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    // 这里的后端如果返回的是redirect，fetch可能会跟随。
+                    // 为了更好的体验，建议后端返回 JSON，或者检查 res.url
+                    if (res.ok) {
+                        // 刷新页面以显示最新保存的数据 (特别是图片路径)
+                        alert('网站配置已保存成功！');
+                        window.location.reload();
+                    } else {
+                        alert('保存失败，请检查服务器日志');
+                    }
+                } catch(e) {
+                    console.error(e);
+                    alert('网络请求错误');
+                } finally {
+                    this.loading = false;
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

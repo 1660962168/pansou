@@ -1,0 +1,791 @@
+{% extends 'index_base.html' %} {% block title %}{{ site_config.site_name }}{%
+endblock %} {% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/index-Cp-LnOST.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/Search.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/RankingSection-BnNI65rK.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ResourceDialog-DdFzmYpk.css') }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/Search-Dp9NaV8Q.css') }}" />
+<style>
+  .loading-box {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+    font-size: 14px;
+  }
+
+  .global-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.6);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+  }
+
+  .global-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
+    }
+
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .pc-link-toggle .toggle-link-btn {
+      display: none !important;
+    }
+
+    .pc-link-toggle .pc-link-content {
+      display: block !important;
+    }
+  }
+
+  .disabled-item {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(100%);
+    transition: all 0.3s;
+  }
+  .empty-state-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    background: #fff;
+    border-radius: 8px;
+    margin-top: 10px;
+  }
+  .empty-icon {
+    width: 160px;
+    height: 160px;
+    margin-bottom: 16px;
+  }
+  .empty-title {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+  }
+  .empty-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+  .empty-btn {
+    background-color: #3b82f6;
+    color: #fff;
+    border: none;
+    padding: 10px 32px;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  .empty-btn:hover {
+    background-color: #2563eb;
+  }
+
+  .count-badge {
+    display: inline-block;
+    background-color: #ff4d4f;
+    color: #fff;
+    border-radius: 10px;
+    min-width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    font-size: 12px;
+    margin-left: 4px;
+    padding: 0 5px;
+    font-weight: bold;
+    vertical-align: middle;
+    transform: translateY(-1px);
+  }
+</style>
+{% endblock %} {% block content %}
+<div id="search-app-wrapper" v-pre>
+  <div id="search-app"></div>
+</div>
+
+<script type="text/x-template" id="search-template">
+
+  <div>
+    <div class="global-loading-overlay" v-if="globalLoading">
+        <div class="global-spinner"></div>
+        <div style="color: #3b82f6; font-size: 14px; font-weight: 600;">资源处理中，请稍候...</div>
+    </div>
+    <div data-v-6b816ffd="" class="searchBox searchList">
+        <div data-v-6b816ffd="" class="search g-search-container">
+            <div data-v-6b816ffd="" class="g-search-box">
+                <input data-v-6b816ffd="" type="text" class="g-search-input" placeholder="只输入剧名即可，无需添加「第x季」" v-model="keyword" @keyup.enter="doSearch">
+            </div>
+           <button data-v-6b816ffd="" class="g-search-btn" @click="doSearch" :disabled="isLoadingTg[currentTab] || isLoadingPlugin[currentTab]">
+                [[ (isLoadingTg[currentTab] || isLoadingPlugin[currentTab]) ? '搜索中...' : '搜索' ]]
+            </button>
+        </div>
+    </div>
+
+    <div data-v-6b816ffd="" class="listBox">
+        <div data-v-6b816ffd="" class="screen">
+            <div data-v-6b816ffd="" class="fixed">
+                <h3 data-v-6b816ffd="">筛选</h3>
+                <div data-v-6b816ffd="" class="box pc-source-switch">
+                    <a data-v-6b816ffd="" href="javascript:;" v-for="tab in tabs" :key="tab.value" 
+                       :class="{ active: currentTab === tab.value }" @click="switchTab(tab.value)">
+                       [[ tab.name ]]
+                       <span class="count-badge" v-show="displayTabCounts[tab.value] > 0">[[ displayTabCounts[tab.value] ]]</span>
+                  </a>
+                </div>
+            </div>
+        </div>
+
+        <div data-v-6b816ffd="" class="left">
+            <div data-v-6b816ffd="" class="Ebox">
+                <div data-v-6b816ffd="" class="mobile-tabs">
+                    <div data-v-6b816ffd="" class="el-tabs el-tabs--top">
+                        <div class="el-tabs__header is-top">
+                            <div class="el-tabs__nav-wrap is-top">
+                                <div class="el-tabs__nav-scroll">
+                                    <div class="el-tabs__nav is-top" role="tablist">
+                                       <div class="el-tabs__item is-top" v-for="tab in tabs" :key="'mob-'+tab.value" 
+                                             :class="{ 'is-active': currentTab === tab.value }" @click="switchTab(tab.value)">[[ tab.name ]]
+                                            <span class="count-badge" v-show="displayTabCounts[tab.value] > 0">[[ displayTabCounts[tab.value] ]]</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div data-v-6b816ffd="" class="Qbtn">
+                    <div data-v-6b816ffd="" class="btn guide-tip">
+                        <p data-v-6b816ffd="">点击 <span data-v-6b816ffd="">获取链接</span> 服务端自动解密打印</p>
+                        <div data-v-6b816ffd="" class="guide-arrows">
+                            <span data-v-6b816ffd="" class="guide-arrow">↓</span>
+                            <span data-v-6b816ffd="" class="guide-arrow">↓</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div data-v-6b816ffd="" class="list" v-if="results.length > 0 || localResults.length > 0">
+                    <div data-v-820a1b28="" class="item" v-for="item in localResults" :key="'local-'+item.id">
+                        <a data-v-820a1b28="" href="javascript:;" class="title">[[ item.name ]]</a>
+                        <div data-v-820a1b28="" class="item-info">
+                            <div data-v-820a1b28="" class="item-local-badge">
+                                <span data-v-820a1b28="" class="local-btn">站长精选</span>
+                                <span data-v-820a1b28="" class="episode-tag" v-if="item.quark_current_link && item.baidu_current_link">双端支持</span>
+                                <span data-v-820a1b28="" class="episode-tag" v-else-if="item.quark_current_link">仅夸克</span>
+                                <span data-v-820a1b28="" class="episode-tag" v-else>仅百度</span>
+                                <span data-v-820a1b28="" class="local-desc">站长手动维护 · 失效进群联系补链</span>
+                            </div>
+                            <div data-v-820a1b28="" class="btns2" @click="openLocalLink(item)">获取链接</div>
+                        </div>
+                    </div>
+
+                    <div data-v-6b816ffd="" class="item" v-for="(item, index) in results" :key="item.url || index" :class="{ 'disabled-item': disabledItems.includes(item.url) }">
+                        <a data-v-6b816ffd="" href="javascript:;" class="title">[[ item.note ]]</a>
+                        <div data-v-6b816ffd="" class="item-info">
+                            <div data-v-6b816ffd="" class="type">
+                                <span data-v-6b816ffd="" class="source-tag">
+                                    来源：[[ getTabName(currentTab) ]]
+                                </span>
+                                <span data-v-6b816ffd="" class="source-tag" style="margin-left:15px;">
+                                    更新时间：[[ formatDate(item.datetime) ]]
+                                </span>
+                            </div>
+                            <div data-v-6b816ffd="" class="btns2" @click="decryptLink(item)">获取链接</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="loading-box" v-if="isLoadingTg[currentTab]" style="color:#007bff;">⚡ 正在极速检索专线节点...</div>
+                <div class="loading-box" v-if="!isLoadingTg[currentTab] && isLoadingPlugin[currentTab]" style="color:#e6a23c;">🔍 已展示部分结果，正在深度刮削扩展源，请稍候...</div>
+                <div class="empty-state-container" v-if="!isLoadingTg[currentTab] && !isLoadingPlugin[currentTab] && hasSearched && results.length === 0 && localResults.length === 0">
+    <svg class="empty-icon" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M158.333 66.6667L100 33.3333L41.6667 66.6667V133.333L100 166.667L158.333 133.333V66.6667Z" fill="#F3F4F6" stroke="#E5E7EB" stroke-width="4" stroke-linejoin="round"/>
+        <path d="M41.6667 66.6667L100 100M158.333 66.6667L100 100M100 100V166.667" stroke="#E5E7EB" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M75 50L125 78.5714" stroke="#E5E7EB" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="100" cy="100" r="16" fill="#D1D5DB"/>
+        <path d="M92 96L100 104L108 96" stroke="#9CA3AF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="empty-title">很抱歉，当前网盘暂无该资源</div>
+    <div class="empty-subtitle">建议切换顶部网盘选项，或尝试精简搜索词 (如：庆余年)</div>
+    <button class="empty-btn" @click="openBanner()">进群求助</button>
+</div>
+            </div>
+        </div>
+
+        <div data-v-6b816ffd="" class="right">
+            <div data-v-f72a907d="" data-v-6b816ffd="" class="ranking-section">
+                <div data-v-f72a907d="" class="container">
+                    <h2 data-v-f72a907d="" class="section-title">热门榜单</h2>
+                    <div data-v-f72a907d="" class="rankings-grid">
+                        {% if ranking_dict %}
+                            {% for cat_name, items in ranking_dict.items() %}
+                            <div data-v-f72a907d="" class="ranking-card">
+                                <div data-v-f72a907d="" class="ranking-header">
+                                    <h3 data-v-f72a907d="" class="ranking-name">{{ cat_name }}</h3>
+                                </div>
+                                <div data-v-f72a907d="" class="ranking-items">
+                                    {% for item in items[:5] %}
+                                    <div data-v-f72a907d="" class="ranking-item" onclick="window.location.href='/search?kw={{ item.title }}'" style="cursor: pointer;">
+                                        <span data-v-f72a907d="" class="rank-number">{{ item.rank }}</span>
+                                        <span data-v-f72a907d="" class="item-title">{{ item.title }}</span>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div style="text-align: center; padding: 20px; color: #94a3b8; width: 100%;">暂无榜单数据</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="banner-qr-overlay" v-show="showBanner" style="z-index: 10000; display: flex;">
+            <div class="banner-qr-box">
+                <div class="banner-qr-header">
+                    <button class="banner-qr-close" @click="showBanner = false">×</button>
+                    <h3>扫码进群</h3>
+                    <p>失效补链 · 资源求助 · 点映通知</p>
+                </div>
+                <div class="banner-qr-body">
+                    <div class="banner-qr-img-wrap" style="min-height: 150px; display: flex; align-items: center; justify-content: center;">
+                        <div id="group-qrcode-local" v-show="systemQrCode"></div>
+                        <div v-if="!systemQrCode" style="color: #999; font-size: 14px;">站长暂未配置群二维码</div>
+                    </div>
+                    <p class="banner-qr-desc">资源失效补链 · 找不到的帮你找</p>
+                    <p class="banner-qr-tip">截图保存 → 微信扫一扫 → 相册识别</p>
+                </div>
+                <div class="banner-qr-footer">
+                    <button class="banner-qr-btn" @click="showBanner = false">我知道了</button>
+                </div>
+            </div>
+        </div>
+        <div data-v-60306d9f="" data-v-f8509e42="" class="dialog-overlay" v-if="dialog_overlay" style="z-index: 9999;">
+            <div data-v-60306d9f="" class="dialog-box">
+                <button data-v-60306d9f="" class="close-btn" @click="dialog_overlay = false">
+                    <svg data-v-60306d9f="" viewBox="0 0 24 24" width="20" height="20">
+                        <path data-v-60306d9f="" fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"></path>
+                    </svg>
+                </button>
+                <div data-v-60306d9f="" class="dialog-content">
+                    <div data-v-60306d9f="" class="qrcode-section">
+                        <div data-v-60306d9f="" class="qrcode-title"> 用<span data-v-60306d9f="">[[ dialogTitle ]]</span></div>
+                        <div data-v-60306d9f="" class="qrcode-tips">[[ dialogTips ]]</div>
+                        <div data-v-60306d9f="" class="qrcode-box" id="dialog-qrcode" ></div>
+                        <div data-v-60306d9f="" class="pwd-hint" v-if="showPwdHint">
+                            提取码：<strong data-v-60306d9f="">[[ dialogPwd ]]</strong>
+                        </div>
+                    </div>
+                    <div data-v-025ecf0a="" class="countdown-warning"><div data-v-025ecf0a="" class="countdown-icon">⏰</div><div data-v-025ecf0a="" class="countdown-content"><div data-v-025ecf0a="" class="countdown-title">链接将在 <span data-v-025ecf0a="" class="countdown-time">[[ countdownText ]]</span> 后失效</div><div data-v-025ecf0a="" class="countdown-subtitle">请立即保存到你的网盘，否则无法使用！</div></div></div>
+                    <div data-v-025ecf0a="" class="usage-tips"><div data-v-025ecf0a="" class="tip-item tip-red"><span data-v-025ecf0a="" class="tip-icon">⚠️</span><span data-v-025ecf0a="" class="tip-text"><strong data-v-025ecf0a="">重要：必须先点【保存到我的网盘】按钮</strong></span></div>
+                    <div data-v-025ecf0a="" class="tip-item tip-orange">
+                        <span data-v-025ecf0a="" class="tip-icon">✅</span>
+                        <span data-v-025ecf0a="" class="tip-text">保存成功后，再从你的网盘APP里下载文件</span>
+                    </div>
+                    <div data-v-025ecf0a="" class="tip-item tip-yellow" v-if="showYellowTip"><span data-v-025ecf0a="" class="tip-icon">💡</span><span data-v-025ecf0a="" class="tip-text">夸克和谐快，如果全部和谐建议切换百度盘</span></div>
+                    </div>
+                    <div data-v-60306d9f="" class="resource-nav">
+                        <div data-v-60306d9f="" class="nav-item resource-title"><span data-v-60306d9f="" class="label">[[ dialogResourceTitle ]]</span></div>
+                        <div data-v-60306d9f="" class="pc-link-toggle">
+                            <button data-v-60306d9f="" class="toggle-link-btn" @click="showPcLink = !showPcLink">
+                                <span data-v-60306d9f="" class="toggle-arrow" :class="{ expanded: showPcLink }">›</span>
+                                <span data-v-60306d9f="">电脑上不方便扫码？点这里复制链接</span>
+                            </button>
+                            <div data-v-60306d9f="" class="pc-link-content" v-show="showPcLink">
+                                <div data-v-60306d9f="" class="link-wrapper">
+                                    <a data-v-60306d9f="" :href="fullDialogLink" target="_blank" rel="noopener noreferrer" class="resource-link">[[ fullDialogLink ]]</a>
+                                    <div data-v-60306d9f="" class="btn-group">
+                                        <button data-v-60306d9f="" class="action-btn copy-btn" @click="copyToClipboard(fullDialogLink)">
+                                            <svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16">
+                                                <path data-v-60306d9f="" fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path>
+                                            </svg>
+                                            <span data-v-60306d9f="">复制链接</span>
+                                        </button>
+                                        <a data-v-60306d9f="" class="action-btn open-btn" href="javascript:;" @click="openNetdiskLink">
+                                            <svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16">
+                                                <path data-v-60306d9f="" fill="currentColor" d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"></path>
+                                            </svg><span data-v-60306d9f="">打开</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div data-v-60306d9f="" class="group-tip" @click="openBanner">
+                    <span data-v-60306d9f="" class="group-tip-text">觉得好用？进群获取更多独家资源</span><span data-v-60306d9f="" class="group-tip-arrow">›</span>
+                </div>
+                <div data-v-60306d9f="" class="statement">
+                    <div data-v-60306d9f="" class="statement-content">
+                        <p data-v-60306d9f="">本站链接自动收集自公开网盘，不存储不传播任何文件。</p>
+                    </div>
+                </div>
+            </div> </div> </div> <div v-show="errorDialog" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 10005; display: flex; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.6);">
+        <div style="width: 80%; max-width: 300px; padding: 24px; text-align: center; border-radius: 12px; background: #fff; position: relative; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 16px; color: #ef4444;">提示</div>
+            <div style="font-size: 15px; color: #4b5563; line-height: 1.5; margin-bottom: 12px; word-break: break-all;">
+                [[ errorMessage ]]
+            </div>
+            
+            <div v-if="!errorMessage.includes('上限')" style="font-size: 13px; color: #d97706; background: #fef3c7; padding: 10px; border-radius: 6px; margin-bottom: 24px; text-align: left; line-height: 1.5;">
+                💡 资源失效是正常现象，热门剧容易被和谐，换下一个试试，一般都能找到。
+            </div>
+
+            <button @click="errorDialog = false" style="background: #3b82f6; color: #fff; border: none; padding: 10px 0; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500; width: 100%; margin-bottom: 12px;">
+                我知道了
+            </button>
+            <button @click="errorDialog = false; openBanner()" style="background:#F97316; color: #fff; border: 1px solid #d1d5db; padding: 10px 0; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 500; width: 100%;">
+                进群求助
+            </button>
+        </div>
+    </div>
+
+  </div>
+</script>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+<script>
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      new Vue({
+        el: "#search-app",
+        template: "#search-template",
+        delimiters: ["[[", "]]"],
+        data() {
+          return {
+            keyword: "",
+            currentTab: "baidu",
+            tabs: [
+              { name: "百度网盘", value: "baidu" },
+              { name: "夸克APP", value: "quark" },
+            ],
+            // --- 视图绑定队列 ---
+            results: [],
+            localResults: [],
+            displayTabCounts: { baidu: 0, quark: 0 },
+            
+            // --- 内存缓冲池与渲染调度系统 ---
+            memoryLocalResults: [],
+            memoryCloudResults: { baidu: [], quark: [] },
+            localRenderIndex: 0,
+            cloudRenderIndex: { baidu: 0, quark: 0 },
+            isLocalFetchComplete: false,
+            isLocalRenderComplete: false,
+            renderFrame: null,
+            
+            // --- 状态控制 ---
+            isLoadingTg: { baidu: false, quark: false },
+            isLoadingPlugin: { baidu: false, quark: false },
+            hasSearched: false,
+            currentBatchId: 0,
+            globalLoading: false,
+            disabledItems: [],
+            
+            // --- 弹窗与交互状态 ---
+            dialog_overlay: false,
+            dialogTitle: "",
+            dialogTips: "",
+            showPwdHint: false,
+            showYellowTip: false,
+            dialogLink: "",
+            dialogPwd: "",
+            dialogResourceTitle: "",
+            showPcLink: false,
+            showBanner: false,
+            systemQrCode: "{{ system_config.group_qrcode }}",
+            errorDialog: false,
+            errorMessage: "",
+            lastKeyword: "",
+            countdownText: "10:00",
+            countdownSeconds: 600,
+            countdownTimer: null,
+          };
+        },
+        computed: {
+          fullDialogLink() {
+            if (!this.dialogLink) return "";
+            return this.dialogPwd ? `${this.dialogLink}?pwd=${this.dialogPwd}` : this.dialogLink;
+          },
+        },
+        mounted() {
+          const params = new URLSearchParams(window.location.search);
+          const kw = params.get("kw");
+          if (kw) {
+            this.keyword = kw;
+            this.doSearch();
+          }
+        },
+        watch: {
+          dialog_overlay(newVal) {
+            if (newVal) this.startCountdown();
+            else this.clearCountdown();
+          },
+        },
+        methods: {
+          startCountdown() {
+            this.clearCountdown();
+            this.countdownSeconds = 600;
+            this.countdownText = "10:00";
+            this.countdownTimer = setInterval(() => {
+              this.countdownSeconds--;
+              if (this.countdownSeconds <= 0) {
+                this.clearCountdown();
+                this.dialog_overlay = false;
+                return;
+              }
+              const m = Math.floor(this.countdownSeconds / 60);
+              const s = this.countdownSeconds % 60;
+              this.countdownText = `${m}:${s.toString().padStart(2, "0")}`;
+            }, 1000);
+          },
+          clearCountdown() {
+            if (this.countdownTimer) {
+              clearInterval(this.countdownTimer);
+              this.countdownTimer = null;
+            }
+          },
+          // 渲染引擎宏任务调度
+          startRenderLoop(batchId) {
+            const loop = () => {
+              // 物理级串流拦截，拒绝旧批次污染
+              if (this.currentBatchId !== batchId) return;
+
+              // [阶段 1]：Local 内存池出列 (最高优先级)
+              if (this.localRenderIndex < this.memoryLocalResults.length) {
+                // 每帧处理 2 条，平衡性能与视觉递增感
+                for(let i = 0; i < 2 && this.localRenderIndex < this.memoryLocalResults.length; i++) {
+                  const item = this.memoryLocalResults[this.localRenderIndex];
+                  this.localResults.push(item);
+                  
+                  // 同步递增 Badge
+                  if (item.baidu_current_link) this.displayTabCounts.baidu++;
+                  if (item.quark_current_link) this.displayTabCounts.quark++;
+                  
+                  this.localRenderIndex++;
+                }
+              } else if (this.isLocalFetchComplete && !this.isLocalRenderComplete) {
+                // Local 全部消费且请求终止，释放阻塞锁
+                this.isLocalRenderComplete = true;
+              }
+
+              // [阶段 2]：Cloud 内存池出列 (依赖局部阻塞锁解除)
+              if (this.isLocalRenderComplete) {
+                const active = this.currentTab;
+                
+                // 处理当前激活态 Tab，执行 DOM 挂载
+                for(let i = 0; i < 2 && this.cloudRenderIndex[active] < this.memoryCloudResults[active].length; i++) {
+                  const item = this.memoryCloudResults[active][this.cloudRenderIndex[active]];
+                  this.results.push(item);
+                  this.displayTabCounts[active]++;
+                  this.cloudRenderIndex[active]++;
+                }
+
+                // 后台静默处理非激活 Tab，仅剥离索引与计数计算，严禁触碰 DOM
+                this.tabs.forEach(tab => {
+                  const t = tab.value;
+                  if (t !== active) {
+                    for(let i = 0; i < 2 && this.cloudRenderIndex[t] < this.memoryCloudResults[t].length; i++) {
+                      this.displayTabCounts[t]++;
+                      this.cloudRenderIndex[t]++;
+                    }
+                  }
+                });
+              }
+
+              // 评估是否维持事件环
+              const isFetching = this.isLoadingTg.baidu || this.isLoadingTg.quark || 
+                                 this.isLoadingPlugin.baidu || this.isLoadingPlugin.quark ||
+                                 !this.isLocalFetchComplete;
+              
+              const hasMoreLocal = this.localRenderIndex < this.memoryLocalResults.length;
+              const hasMoreCloud = this.cloudRenderIndex.baidu < this.memoryCloudResults.baidu.length || 
+                                   this.cloudRenderIndex.quark < this.memoryCloudResults.quark.length;
+
+              if (isFetching || hasMoreLocal || hasMoreCloud) {
+                this.renderFrame = requestAnimationFrame(loop);
+              }
+            };
+            
+            this.renderFrame = requestAnimationFrame(loop);
+          },
+          async fetchLocalSource(batchId) {
+            try {
+              const response = await fetch("/api/search_local", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ kw: this.keyword.trim() }),
+              });
+              if (this.currentBatchId !== batchId) return;
+              const res = await response.json();
+              if (res.code === 200) {
+                // 仅写入 Buffer，视图更新下放至帧调度器
+                this.memoryLocalResults = res.data || [];
+              }
+            } catch (e) {
+              console.error("本地精选请求崩溃:", e);
+            } finally {
+              if (this.currentBatchId === batchId) {
+                this.isLocalFetchComplete = true;
+              }
+            }
+          },
+          openLocalLink(item) {
+            let targetType = this.currentTab;
+            let finalLink = "";
+            let finalPwd = "";
+
+            if (targetType === "baidu") {
+              if (item.baidu_current_link) { finalLink = item.baidu_current_link; finalPwd = item.baidu_pwd; } 
+              else if (item.quark_current_link) { targetType = "quark"; finalLink = item.quark_current_link; finalPwd = item.quark_pwd; }
+            } else {
+              if (item.quark_current_link) { finalLink = item.quark_current_link; finalPwd = item.quark_pwd; } 
+              else if (item.baidu_current_link) { targetType = "baidu"; finalLink = item.baidu_current_link; finalPwd = item.baidu_pwd; }
+            }
+
+            if (!finalLink) { alert("当前条目暂无有效分享链接"); return; }
+
+            this.dialogTitle = targetType === "quark" ? "夸克APP" : "百度网盘";
+            this.dialogResourceTitle = item.name;
+            this.dialogLink = finalLink;
+            this.dialogPwd = finalPwd || "";
+            this.dialogTips = targetType === "quark" ? "请保存至网盘后下载" : "打开网盘 - 搜索框 - 相机图标 - 扫码";
+            this.showYellowTip = targetType === "quark";
+            this.showPwdHint = !!finalPwd;
+            this.showPcLink = false;
+            this.dialog_overlay = true;
+
+            this.$nextTick(() => {
+              const qrContainer = document.getElementById("dialog-qrcode");
+              if (qrContainer) {
+                qrContainer.innerHTML = "";
+                new QRCode(qrContainer, {
+                  text: this.fullDialogLink,
+                  width: 120, height: 120,
+                  colorDark: "#000000", colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.L,
+                });
+              }
+            });
+          },
+          openNetdiskLink() {
+            if (!this.fullDialogLink) return;
+            const ua = navigator.userAgent.toLowerCase();
+            if (ua.match(/MicroMessenger/i) == "micromessenger") {
+              alert("请点击右上角选择在【默认浏览器】中打开，以拉起网盘APP。");
+              window.location.href = this.fullDialogLink;
+            } else {
+              window.open(this.fullDialogLink, "_blank");
+            }
+          },
+          openBanner() {
+            this.dialog_overlay = false;
+            this.showBanner = true;
+            this.$nextTick(() => {
+              const qrContainer = document.getElementById("group-qrcode-local");
+              if (qrContainer && this.systemQrCode && qrContainer.innerHTML === "") {
+                new QRCode(qrContainer, {
+                  text: this.systemQrCode,
+                  width: 140, height: 140,
+                  colorDark: "#000000", colorLight: "#ffffff",
+                  correctLevel: QRCode.CorrectLevel.L,
+                });
+              }
+            });
+          },
+          copyToClipboard(text) {
+            navigator.clipboard.writeText(text)
+              .then(() => alert("链接已成功复制到剪贴板！"))
+              .catch((err) => { console.error("复制失败", err); alert("复制失败，请手动选择复制。"); });
+          },
+          getTabName(val) {
+            const tab = this.tabs.find((t) => t.value === val);
+            return tab ? tab.name : "未知类型";
+          },
+          formatDate(dateStr) {
+            if (!dateStr) return "未知";
+            const d = new Date(dateStr);
+            return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString() + " " + d.toLocaleTimeString();
+          },
+          switchTab(val) {
+            if (this.currentTab === val) return;
+            this.currentTab = val;
+            
+            // 零延迟热切换：直接利用静默步进的云端游标，做一次性内存克隆，恢复全视口数据
+            if (this.keyword.trim() && this.lastKeyword === this.keyword.trim() && this.hasSearched) {
+              this.results = this.memoryCloudResults[val].slice(0, this.cloudRenderIndex[val]);
+            } else if (this.keyword.trim()) {
+              this.doSearch();
+            }
+          },
+          async doSearch() {
+            if (!this.keyword.trim() || this.isLoadingTg[this.currentTab] || this.isLoadingPlugin[this.currentTab]) return;
+
+            // 状态机重置，确保无遗留幽灵数据
+            this.displayTabCounts = { baidu: 0, quark: 0 };
+            this.results = [];
+            this.localResults = [];
+            this.memoryLocalResults = [];
+            this.memoryCloudResults = { baidu: [], quark: [] };
+            this.localRenderIndex = 0;
+            this.cloudRenderIndex = { baidu: 0, quark: 0 };
+            this.isLocalFetchComplete = false;
+            this.isLocalRenderComplete = false;
+            
+            if (this.renderFrame) {
+              cancelAnimationFrame(this.renderFrame);
+              this.renderFrame = null;
+            }
+
+            this.lastKeyword = this.keyword.trim();
+            this.currentBatchId++;
+            const batchId = this.currentBatchId;
+
+            this.isLoadingTg = { baidu: true, quark: true };
+            this.isLoadingPlugin = { baidu: true, quark: true };
+            this.hasSearched = true;
+
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.set('kw', this.keyword.trim());
+            window.history.pushState({}, '', newUrl);
+
+            // 唤醒全局渲染队列
+            this.startRenderLoop(batchId);
+
+            // 并发发射 I/O
+            this.fetchSource('tg', batchId, 'baidu');
+            this.fetchSource('plugin', batchId, 'baidu');
+            this.fetchSource('tg', batchId, 'quark');
+            this.fetchSource('plugin', batchId, 'quark');
+            this.fetchLocalSource(batchId);
+          },
+          async fetchSource(srcType, batchId, targetTab) {
+            try {
+              const response = await fetch('/api/do_search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ kw: this.keyword.trim(), cloud_types: [targetTab], src: srcType })
+              });
+
+              if (this.currentBatchId !== batchId) return;
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+              const res = await response.json();
+              if (this.currentBatchId !== batchId) return;
+
+              let merged = res.code === 200 && res.data ? (res.data.merged_by_type || (res.data.data && res.data.data.merged_by_type)) : null;
+
+              if (merged) {
+                // [拦截清洗]：强校验 url 字段，剔除空值或无效链接，避免内存池污染与无效 DOM 渲染
+                const newItems = (merged[targetTab] || []).filter(item => item.url && item.url.trim() !== "");
+                if (newItems.length > 0) {
+                  // 数据追加至内存池，脱离 DOM 开销
+                  this.memoryCloudResults[targetTab] = this.memoryCloudResults[targetTab].concat(newItems);
+                }
+              } else if (res.code !== 200) {
+                console.warn(`[${srcType} - ${targetTab}] 节点响应异常:`, res.message || res.data?.message);
+              }
+            } catch (error) {
+              console.error(`[${srcType} - ${targetTab}] 请求崩溃:`, error);
+            } finally {
+              if (this.currentBatchId === batchId) {
+                this.$nextTick(() => {
+                  if (srcType === 'tg') this.isLoadingTg[targetTab] = false;
+                  if (srcType === 'plugin') this.isLoadingPlugin[targetTab] = false;
+                });
+              }
+            }
+          },
+          async decryptLink(item) {
+            if (!item.url || this.disabledItems.includes(item.url)) return;
+            this.globalLoading = true;
+            try {
+              const response = await fetch("/api/decrypt", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: item.url, password: item.password || "" }),
+              });
+              const res = await response.json();
+              if (res.code === 200) {
+                this.dialogTitle = res.data.type;
+                this.dialogResourceTitle = item.note || item.title || "资源链接";
+                this.dialogLink = res.data.link;
+                this.dialogPwd = res.data.pwd;
+                this.dialogTips = res.data.type === "夸克APP" ? "请保存至网盘后下载" : "打开网盘 - 搜索框 - 相机图标 - 扫码";
+                this.showYellowTip = res.data.type === "夸克APP";
+                this.showPwdHint = !!res.data.pwd;
+                this.showPcLink = false; 
+                this.dialog_overlay = true;
+
+                this.$nextTick(() => {
+                  const qrContainer = document.getElementById("dialog-qrcode");
+                  if (qrContainer) {
+                    qrContainer.innerHTML = "";
+                    new QRCode(qrContainer, {
+                      text: this.fullDialogLink,
+                      width: 120, height: 120,
+                      colorDark: "#000000", colorLight: "#ffffff",
+                      correctLevel: QRCode.CorrectLevel.L,
+                    });
+                  }
+                });
+              } else {
+                let errorText = res.message || "";
+                let tipMsg = "提取异常，请稍后再试";
+
+                if (errorText.match(/失效|404|取消了分享|不存在|错误/)) {
+                  tipMsg = "该资源已失效，请更换链接获取";
+                } else if (errorText.match(/空间不足|容量|满|10008/)) {
+                  tipMsg = "剩余空间不足，无法转存，联系群主释放空间！";
+                } else if (errorText.match(/网络错误|超时/)) {
+                  tipMsg = "网络连接异常，请稍后再试";
+                } else if (errorText.match(/取消|分享/)) {
+                  tipMsg = "该资源已失效，请更换链接获取";
+                }
+                else {
+                  tipMsg = "获取失败: " + errorText;
+                }
+                this.errorMessage = tipMsg;
+                this.errorDialog = true;
+                this.disabledItems.push(item.url);
+              }
+            } catch (e) {
+              console.error("解密请求异常:", e);
+              this.errorMessage = "网络请求异常，请稍后再试";
+              this.errorDialog = true;
+            } finally {
+              this.globalLoading = false;
+            }
+          },
+        },
+      });
+    }, 50);
+  });
+</script>
+{% endblock %}

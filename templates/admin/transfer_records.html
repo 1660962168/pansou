@@ -1,0 +1,229 @@
+{% extends "admin/base.html" %}
+
+{% block title %}转存记录 - 基德资源站{% endblock %}
+{% block page_title %}资源管理 / 转存记录{% endblock %}
+
+{% block head_extra %}
+<style>
+    /* 顶部面板微调 */
+    .ctrl-panel {
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        margin-bottom: 20px; 
+        padding: 16px 20px; 
+        background: #f8fafc; 
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+
+    /* 输入框样式重构 */
+    .limit-input {
+        width: 80px;
+        padding: 6px 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        outline: none;
+        font-size: 14px;
+        font-family: monospace;
+        font-weight: 600;
+        text-align: center;
+        color: #0f172a;
+        background: #fff;
+        transition: all 0.2s ease;
+        margin: 0 8px;
+    }
+    .limit-input:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    /* 表格容器：固定高度与滚动条 */
+    .table-container {
+        max-height: calc(100vh - 280px); /* 动态适应屏幕高度 */
+        overflow-y: auto;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    /* 自定义 Webkit 滚动条 */
+    .table-container::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+    }
+    .table-container::-webkit-scrollbar-track {
+        background: #f8fafc;
+        border-radius: 0 8px 8px 0;
+    }
+    .table-container::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+    .table-container::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8;
+    }
+
+    /* 数据表格深层解耦样式 */
+    /* 数据表格深层解耦样式 */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 14px;
+        table-layout: auto; /* 开启自动布局 */
+    }
+    
+    .data-table th {
+        position: sticky;
+        top: 0;
+        background-color: #f1f5f9;
+        color: #475569;
+        font-weight: 600;
+        padding: 16px 24px; /* 增大上下左右的呼吸感间距 */
+        z-index: 10;
+        white-space: nowrap; /* 表头强制不换行 */
+    }
+    
+    .data-table th::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .data-table td {
+        padding: 16px 24px; /* 与表头保持一致的宽裕间距 */
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+        transition: background-color 0.2s;
+    }
+
+    /* 核心魔法：让前三列紧贴内容宽度，最后一列吃掉所有剩余空间 */
+    .data-table th:nth-child(1), .data-table td:nth-child(1),
+    .data-table th:nth-child(2), .data-table td:nth-child(2),
+    .data-table th:nth-child(3), .data-table td:nth-child(3) {
+        width: 25%; 
+        white-space: nowrap; 
+    }
+    
+    .data-table th:last-child, .data-table td:last-child {
+        width: auto;
+        word-break: break-all; /* 防止超长且无空格的资源名撑破网页 */
+    }
+
+    .data-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    .data-table tbody tr:hover td {
+        background-color: #f8fafc;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="transfer-app" class="card" v-cloak style="padding: 24px;">
+    <div class="ctrl-panel">
+        <div style="display: flex; align-items: center;">
+            <i class="ri-shield-user-line" style="font-size: 20px; color: #3b82f6; margin-right: 8px;"></i>
+            <span style="font-size: 14px; font-weight: 600; color: #1e293b;">全局单IP每日转存限额：</span>
+            <input type="number" v-model="limit" class="limit-input" min="1">
+            <span style="font-size: 13px; color: #64748b;">次 (次日0点自动重置)</span>
+        </div>
+        <button class="btn btn-primary" @click="updateLimit" :disabled="loadingLimit">
+            <i class="ri-save-line"></i> ${ loadingLimit ? '保存中...' : '保存配置' }
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th >转存时间</th>
+                    <th>IP地址</th>
+                    <th>归属地</th>
+                    <th>资源名称</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-if="loading">
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #64748b;">
+                        <i class="ri-loader-4-line" style="display: inline-block; animation: spin 1s linear infinite; margin-right: 8px;"></i> 数据加载中...
+                    </td>
+                </tr>
+                <tr v-else-if="records.length === 0">
+                    <td colspan="4" style="text-align: center; padding: 40px; color: #64748b;">今日暂无转存记录</td>
+                </tr>
+                <tr v-for="record in records" :key="record.id" v-else>
+                    <td style="color: #64748b; font-family: monospace;">${ record.created_at }</td>
+                    <td style="font-family: monospace; color: #0f172a; font-weight: 500;">${ record.ip }</td>
+                    <td>
+                        <span style="background: #e0e7ff; color: #4f46e5; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 500;">
+                            ${ record.region }
+                        </span>
+                    </td>
+                    <td style="font-weight: 500; color: #334155;">${ record.resource_name }</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+// 旋转动画(用于Loading状态)
+const style = document.createElement('style');
+style.innerHTML = `@keyframes spin { 100% { transform: rotate(360deg); } }`;
+document.head.appendChild(style);
+
+new Vue({
+    el: '#transfer-app',
+    delimiters: ['${', '}'],
+    data: {
+        records: [],
+        limit: 20,
+        loading: true,
+        loadingLimit: false
+    },
+    mounted() {
+        this.fetchData();
+        // 挂载30秒轮询探针
+        setInterval(this.fetchData, 30000);
+    },
+    methods: {
+        fetchData() {
+            fetch('/admin/api/transfer-records/list')
+                .then(res => res.json())
+                .then(res => {
+                    if(res.code === 200) {
+                        this.records = res.data;
+                        this.limit = res.limit;
+                    }
+                })
+                .finally(() => { this.loading = false; });
+        },
+        updateLimit() {
+            if(!this.limit || this.limit < 1) return alert('拦截：请输入有效的限制次数');
+            this.loadingLimit = true;
+            fetch('/admin/api/transfer-limit/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit: this.limit })
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.code === 200) {
+                    alert('限流阈值重置成功');
+                } else {
+                    alert(`异常：${res.msg}`);
+                }
+            })
+            .finally(() => { this.loadingLimit = false; });
+        }
+    }
+});
+</script>
+{% endblock %}

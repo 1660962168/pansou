@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>后台管理登录 - {{ site_config.site_name }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    
+    <style>
+        /* --- 核心变量 --- */
+        :root {
+            --primary-color: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --white: #ffffff;
+            --text-main: #1f2937;
+            --text-sub: #6b7280;
+            --border-color: #e2e8f0;
+            --shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-main);
+        }
+
+        /* --- 登录卡片容器 --- */
+        .login-card {
+            background: var(--white);
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+            border-radius: 24px;
+            box-shadow: var(--shadow);
+            border: 1px solid #f1f5f9;
+            text-align: center;
+            margin: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* --- Logo 区域 --- */
+        .brand-header { margin-bottom: 30px; }
+        .logo-icon {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .brand-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #111;
+            letter-spacing: -0.5px;
+        }
+        .brand-subtitle {
+            font-size: 14px;
+            color: var(--text-sub);
+            margin-top: 5px;
+        }
+
+        /* --- 表单样式 --- */
+        .form-group { margin-bottom: 20px; text-align: left; }
+        
+        .input-wrapper { position: relative; display: flex; align-items: center; }
+        
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            color: #94a3b8;
+            font-size: 18px;
+            pointer-events: none;
+            transition: color 0.3s;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 14px 14px 45px;
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            font-size: 15px;
+            background: #f8fafc;
+            transition: all 0.3s;
+            color: var(--text-main);
+        }
+
+        .form-input:focus {
+            background: var(--white);
+            border-color: #bfdbfe;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+        }
+        .form-input:focus + .input-icon,
+        .input-wrapper:focus-within .input-icon { color: var(--primary-color); }
+
+        /* --- 登录按钮 --- */
+        .login-btn {
+            width: 100%;
+            padding: 14px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        .login-btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(37, 99, 235, 0.4);
+        }
+        .login-btn:active { transform: translateY(0); }
+
+        /* --- 底部辅助链接 --- */
+        .form-footer {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+        .form-footer a {
+            text-decoration: none;
+            color: var(--text-sub);
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+        .form-footer a:hover { color: var(--primary-color); }
+
+        /* --- 错误/成功提示 --- */
+        .msg-box {
+            padding: 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .msg-box i { margin-right: 6px; }
+        .msg-error { background: #fef2f2; color: #ef4444; }
+        .msg-success { background: #f0fdf4; color: #16a34a; }
+
+        /* --- 模态框 (Reset Password) --- */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 350px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            transform: scale(0.9);
+            transition: transform 0.3s;
+            position: relative;
+        }
+        .modal-overlay.active .modal-content { transform: scale(1); }
+        
+        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; text-align: center; }
+        .close-modal {
+            position: absolute; top: 15px; right: 15px;
+            font-size: 24px; cursor: pointer; color: #94a3b8;
+        }
+        .close-modal:hover { color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="brand-header">
+            <img src="{{ site_config.logo_path }}" alt="Logo" style="height: 64px; object-fit: contain; margin-bottom: 15px; display: inline-block;">
+            <h1 class="brand-title">后台管理</h1>
+            <p class="brand-subtitle">请登录以管理影视资源数据</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="msg-box {% if category == 'success' %}msg-success{% else %}msg-error{% endif %}">
+                  <i class="ri-{% if category == 'success' %}checkbox-circle-fill{% else %}error-warning-fill{% endif %}"></i> 
+                  {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('admin.login') }}" method="POST">
+            <div class="form-group">
+                <div class="input-wrapper">
+                    <i class="ri-user-3-line input-icon"></i>
+                    <input type="text" 
+                           name="username" 
+                           class="form-input" 
+                           placeholder="管理员账号" 
+                           value="{{ username if username else '' }}" 
+                           required 
+                           autocomplete="username">
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="input-wrapper">
+                    <i class="ri-lock-2-line input-icon"></i>
+                    <input type="password" 
+                           name="password" 
+                           class="form-input" 
+                           placeholder="登录密码" 
+                           required 
+                           autocomplete="current-password">
+                </div>
+            </div>
+            <div class="form-footer">
+                <label style="display: flex; align-items: center; cursor: pointer;">
+                    <input type="checkbox" name="remember" style="margin-right: 6px;" {% if username %}checked{% endif %}> 
+                    30天免登录
+                </label>
+                <a onclick="openModal()">忘记密码?</a>
+            </div>
+            <button type="submit" class="login-btn">
+                立即登录 <i class="ri-arrow-right-line" style="vertical-align: middle; margin-left: 5px;"></i>
+            </button>
+        </form>
+    </div>
+
+    <div class="modal-overlay" id="resetModal">
+        <div class="modal-content">
+            <div class="close-modal" onclick="closeModal()">&times;</div>
+            <div class="modal-title">重置管理员密码</div>
+            <p style="font-size: 12px; color: #666; margin-bottom: 15px; text-align: center;">
+                请输入服务器配置文件 (config.py) 中的 SECRET_KEY 以验证身份。
+            </p>
+            <form action="{{ url_for('admin.reset_password') }}" method="POST">
+                <div class="form-group">
+                    <input type="text" name="username" class="form-input" placeholder="要重置的用户名" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" name="secret_key" class="form-input" placeholder="输入 SECRET_KEY" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" name="new_password" class="form-input" placeholder="设置新密码" required>
+                </div>
+                <button type="submit" class="login-btn" style="margin-top: 10px; background: #ef4444;">
+                    确认重置
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openModal() {
+            document.getElementById('resetModal').classList.add('active');
+        }
+        function closeModal() {
+            document.getElementById('resetModal').classList.remove('active');
+        }
+    </script>
+</body>
+</html>

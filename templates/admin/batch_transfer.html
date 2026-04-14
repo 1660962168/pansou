@@ -1,0 +1,296 @@
+{% extends "admin/base.html" %}
+
+{% block title %}批量转存 - 后台管理{% endblock %}
+{% block page_title %}资源管理 / 批量转存{% endblock %}
+
+{% block content %}
+<div id="app" class="content-body" v-cloak>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">批量链接识别与转存</div>
+        </div>
+        <div class="panel-body">
+            <div class="form-group">
+                <label>资源分类</label>
+                <select v-model="selectedType" class="form-select" style="max-width: 200px;">
+                    <option value="tv">电视剧</option>
+                    <option value="movie">电影</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
+                <div style="font-size: 12px; color: #ef4444; margin-bottom: 8px;">
+                    * 提示：如果是本地网盘资源请打开此按钮
+                </div>
+                <label class="toggle-switch" style="vertical-align: middle;">
+                    <input type="checkbox" v-model="isLocal">
+                    <span class="slider"></span>
+                </label>
+                <span style="font-size: 13px; margin-left: 8px; vertical-align: middle; color: #1e293b;">本地网盘资源 (固定链接且不检测失效)</span>
+            </div>
+            <div class="form-group" style="margin-top: 20px;">
+                <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
+                    粘贴网盘链接（每行一条，支持自带提取码，自动识别夸克/百度）
+                </div>
+                <div style="font-size: 12px; color: #64748b; margin-bottom: 8px;">
+                    * 提示：若在链接前加上文本（如“XXXhttps://...”），系统会将该文本优先作为资源名称；若不加，则自动抓取网盘真实文件名。
+                </div>
+                <textarea v-model="rawInput" rows="10" class="form-textarea" :disabled="isProcessing"></textarea>
+            </div>
+            <div class="form-actions">
+                <button class="btn-primary" @click="startBatch" :disabled="isProcessing || !rawInput.trim()">
+                    <i class="ri-play-circle-line"></i> 开始批量转存
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel-card" style="margin-top: 20px;" v-if="tasks.length > 0">
+        <div class="panel-header" style="justify-content: space-between;">
+            <div class="panel-title">任务队列进度</div>
+            <div class="status-summary">
+                成功: <span style="color:#10b981">${stats.success}</span> /
+                失败: <span style="color:#ef4444">${stats.fail}</span> /
+                总计: ${tasks.length}
+            </div>
+        </div>
+        <div class="task-list">
+            <div class="task-item" v-for="(task, index) in tasks" :key="index">
+                <div class="task-status">
+                    <i class="ri-loader-4-line spin" style="color:#3b82f6" v-if="task.status === 'processing'"></i>
+                    <i class="ri-check-line" style="color:#10b981" v-if="task.status === 'success'"></i>
+                    <i class="ri-close-line" style="color:#ef4444" v-if="task.status === 'error'"></i>
+                    <i class="ri-time-line" style="color:#94a3b8" v-if="task.status === 'pending'"></i>
+                </div>
+                <div class="task-info">
+                    <div class="task-line" :title="task.raw">${task.raw}</div>
+                    <div class="task-result" :class="task.status">
+                        ${task.resultMsg || '等待执行...'}
+                        <span v-if="task.name" style="color:#1e293b; font-weight: 600;"> -> ${task.name}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="global-loading-overlay" v-if="isProcessing">
+        <div class="loading-content">
+            <i class="ri-loader-4-line spinner-icon"></i>
+            <div class="loading-text">批量处理中 (${stats.current}/${tasks.length})<br><span
+                    class="text-sub">请勿刷新网页或关闭窗口，耐心等待...</span></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block head_extra %}
+<link rel="stylesheet" href="{{ url_for('static', filename='admin/css/updates.css') }}">
+<style>
+    [v-cloak] {
+        display: none;
+    }
+
+    .form-textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-family: monospace;
+        resize: vertical;
+        line-height: 1.5;
+        outline: none;
+        transition: border-color 0.2s;
+    }
+
+    .form-textarea:focus {
+        border-color: #3b82f6;
+    }
+
+    .form-textarea:disabled {
+        background-color: #f8fafc;
+        cursor: not-allowed;
+    }
+
+    .form-select {
+        padding: 8px 12px;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        outline: none;
+    }
+
+    .form-actions {
+        margin-top: 15px;
+    }
+
+    .task-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 15px;
+    }
+
+    .task-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 10px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        font-size: 13px;
+    }
+
+    .task-status {
+        font-size: 18px;
+        margin-top: 2px;
+    }
+
+    .task-info {
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .task-line {
+        color: #64748b;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+    }
+
+    .task-result.success {
+        color: #10b981;
+    }
+
+    .task-result.error {
+        color: #ef4444;
+    }
+
+    .task-result.processing {
+        color: #3b82f6;
+    }
+
+    .spin {
+        animation: spin 1s linear infinite;
+        display: inline-block;
+    }
+
+    .global-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.65);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        backdrop-filter: blur(3px);
+    }
+
+    .loading-content {
+        background: #1e293b;
+        padding: 30px 50px;
+        border-radius: 12px;
+        text-align: center;
+        color: #fff;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .spinner-icon {
+        font-size: 48px;
+        color: #3b82f6;
+        display: inline-block;
+        animation: spin 1s linear infinite;
+        margin-bottom: 15px;
+    }
+
+    .loading-text {
+        font-size: 15px;
+        line-height: 1.6;
+        font-weight: 500;
+        letter-spacing: 1px;
+    }
+
+    .loading-text .text-sub {
+        font-size: 13px;
+        color: #94a3b8;
+        font-weight: normal;
+    }
+
+    @keyframes spin {
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+<script>
+    new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            rawInput: '',
+            selectedType: 'tv',
+            isLocal: false,
+            isProcessing: false,
+            tasks: [],
+            stats: { success: 0, fail: 0, current: 0 }
+        },
+        methods: {
+            async startBatch() {
+                const lines = this.rawInput.split('\n').map(l => l.trim()).filter(l => l);
+                if (lines.length === 0) return;
+
+                // 初始化任务队列
+                this.tasks = lines.map(line => ({
+                    raw: line,
+                    status: 'pending', // pending | processing | success | error
+                    resultMsg: '',
+                    name: ''
+                }));
+                this.stats = { success: 0, fail: 0, current: 0 };
+                this.isProcessing = true;
+
+                // 队列流式执行
+                for (let i = 0; i < this.tasks.length; i++) {
+                    const task = this.tasks[i];
+                    task.status = 'processing';
+                    task.resultMsg = '解析与转存中...';
+                    this.stats.current = i + 1;
+
+                    try {
+                        const res = await fetch('/admin/api/monitor/batch_transfer_single', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ text: task.raw, type: this.selectedType, is_local: this.isLocal })
+                        });
+                        const data = await res.json();
+
+                        if (data.code === 200) {
+                            task.status = 'success';
+                            task.resultMsg = '转存入库成功';
+                            task.name = data.name;
+                            this.stats.success++;
+                        } else {
+                            task.status = 'error';
+                            task.resultMsg = data.msg;
+                            this.stats.fail++;
+                        }
+                    } catch (error) {
+                        task.status = 'error';
+                        task.resultMsg = '网络超时或服务端异常';
+                        this.stats.fail++;
+                    }
+                }
+
+                this.isProcessing = false;
+                alert(`批量转存完毕！\n成功：${this.stats.success}，失败/跳过：${this.stats.fail}`);
+            }
+        }
+    });
+</script>
+{% endblock %}

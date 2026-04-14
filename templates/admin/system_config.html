@@ -1,0 +1,925 @@
+{% extends "admin/base.html" %}
+
+{% block title %}系统配置 - 后台管理{% endblock %}
+{% block page_title %}系统管理 / 系统配置{% endblock %}
+
+{% block content %}
+<div id="app" class="content-body" v-cloak>
+    <div class="panel-card config-layout">
+        
+        <div class="config-sidebar">
+            <div class="nav-title">设置项</div>
+            <div class="nav-item" :class="{ active: currentTab === 'baidu' }" @click="currentTab = 'baidu'">
+                <i class="ri-hard-drive-2-line"></i> 百度配置
+            </div>
+            <div class="nav-item" :class="{ active: currentTab === 'quark' }" @click="currentTab = 'quark'">
+                <i class="ri-cloud-line"></i> 夸克配置
+            </div>
+            <div class="nav-item" :class="{ active: currentTab === 'search' }" @click="currentTab = 'search'">
+                <i class="ri-search-eye-line"></i> 搜索服务
+            </div>
+            <div class="nav-item" :class="{ active: currentTab === 'network' }" @click="currentTab = 'network'">
+                <i class="ri-global-line"></i> 任务设置
+            </div>
+            <div class="nav-item" :class="{ active: currentTab === 'drainage' }" @click="switchTab('drainage')">
+                <i class="ri-folder-shield-2-line"></i> 引流配置
+            </div>
+        </div>
+
+        <div class="config-content">
+            <div class="config-header">
+                <h3>${ tabTitle }</h3>
+                <p class="desc">${ tabDesc }</p>
+            </div>
+
+            <form @submit.prevent="saveConfig">
+                
+                <div v-show="currentTab === 'baidu'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center;">
+                            百度网盘 
+                            <span class="status-badge" :class="(form.baidu_bduss && form.baidu_bduss_bfess && form.baidu_stoken) ? 'status-normal' : 'status-error'">
+                                ${ (form.baidu_bduss && form.baidu_bduss_bfess && form.baidu_stoken) ? '正常' : '未配置' }
+                            </span>
+                        </label>
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="btn-primary" @click="openBaiduModal">
+                                <i class="ri-settings-3-line"></i> 配置Cookie
+                            </button>
+                        </div>
+                        <div class="helper-text">手动抓取cookie进行配置</div>
+                    </div>
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>临时资源路径</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" v-model="form.baidu_save_path" placeholder="例如: /资源/" style="width: 200px;">
+                            <button type="button" class="btn-secondary btn-sm" @click="openBaiduDirModal('save')">获取目录</button>
+                        </div>
+                        <div class="helper-text">留空则默认根目录下的资源文件夹，需确保以 / 结尾</div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>每日资源路径</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" v-model="form.baidu_daily_path" placeholder="例如: /每日更新/" style="width: 200px;">
+                            <button type="button" class="btn-secondary btn-sm" @click="openBaiduDirModal('daily')">获取目录</button>
+                        </div>
+                        <div class="helper-text">每日自动更新的资源存放路径，需确保以 / 结尾</div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>百度网盘默认提取码</label>
+                        <input type="text" v-model="form.baidu_extract_code" maxlength="4" placeholder="例如: yyds" style="width: 200px;">
+                        <div class="helper-text">限制4位数英文或数字，不允许为空</div>
+                    </div>
+                </div>
+
+                <div v-show="currentTab === 'quark'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label style="display: flex; align-items: center;">
+                            夸克网盘
+                            <span class="status-badge" :class="form.quark_cookie ? 'status-normal' : 'status-error'">
+                                ${ form.quark_cookie ? '正常' : '未配置' }
+                            </span>
+                        </label>
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="btn-primary" @click="openQuarkCookieModal">
+                                <i class="ri-settings-3-line"></i> 配置Cookie
+                            </button>
+                        </div>
+                        <div class="helper-text">手动抓取夸克网盘Cookie进行配置，需包含 b-user-id 等基准字段</div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>临时资源路径</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" v-model="form.quark_save_dir_name" readonly placeholder="例如: /" style="width: 200px; background-color: #f8fafc; cursor: not-allowed;">
+                            <button type="button" class="btn-secondary btn-sm" @click="openQuarkDirModal('save')">获取目录</button>
+                        </div>
+                        <div class="helper-text">留空则默认根目录</div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>每日资源路径</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="text" v-model="form.quark_daily_dir_name" readonly placeholder="例如: /" style="width: 200px; background-color: #f8fafc; cursor: not-allowed;">
+                            <button type="button" class="btn-secondary btn-sm" @click="openQuarkDirModal('daily')">获取目录</button>
+                        </div>
+                        <div class="helper-text">每日自动更新的资源存放路径</div>
+                    </div>
+                </div>
+
+                <div v-show="currentTab === 'search'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label>外部搜索 API 地址</label>
+                        <input type="text" v-model="form.search_api_url" placeholder="http://api.example.com/v1/search">
+                    </div>
+                    <div class="form-group">
+                        <label>API 密钥 (Token)</label>
+                        <div class="input-wrapper">
+                            <input :type="showToken ? 'text' : 'password'" v-model="form.search_api_token">
+                            <i class="eye-btn" :class="showToken ? 'ri-eye-line' : 'ri-eye-off-line'" @click="showToken = !showToken"></i>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label>请求超时 (秒)</label>
+                            <input type="number" v-model="form.search_timeout">
+                        </div>
+                    </div>
+                </div>
+
+                <div v-show="currentTab === 'network'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label>自动监控间隔 (分钟)</label>
+                        <input type="number" v-model="form.task_interval" min="10">
+                        <div class="helper-text">“每日更新”任务自动检查资源的频率。建议不要低于10分钟，避免IP被封。</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>加群活码</label>
+                        <input type="text" v-model="form.group_qrcode" placeholder="请输入加群活码链接或图片地址 URL">
+                        <div class="helper-text">用于在前端页面展示引流加群的活码链接。</div>
+                    </div>
+                </div>
+
+                <div v-show="currentTab === 'drainage'" class="tab-pane fade-in drainage-container">
+                    <div class="drainage-toolbar">
+                        <div class="breadcrumb">
+                            <span class="path-item" v-for="(bc, index) in drainageBreadcrumbs" :key="index" @click="navigateBreadcrumb(index)">
+                                ${ bc.name } <i class="ri-arrow-right-s-line" v-if="index < drainageBreadcrumbs.length - 1"></i>
+                            </span>
+                        </div>
+                        <div class="actions">
+                            <button type="button" class="btn-primary btn-sm" @click="showUploadModal = true">
+                                <i class="ri-upload-cloud-2-line"></i> 上传文件
+                            </button>
+                            <button type="button" class="btn-secondary btn-sm" @click="showMkdirModal = true">
+                                <i class="ri-folder-add-line"></i> 新建文件夹
+                            </button>
+                            <button type="button" class="btn-secondary btn-sm" @click="showTextModal = true">
+                                <i class="ri-file-text-line"></i> 新建文本
+                            </button>
+                            <button type="button" class="btn-danger btn-sm" v-if="selectedFiles.length > 0" @click="deleteSelectedFiles(null)">
+                                <i class="ri-delete-bin-line"></i> 批量删除 (${ selectedFiles.length })
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="file-grid">
+                        <table class="file-table">
+                            <thead>
+                                <tr>
+                                    <th width="40"><input type="checkbox" @change="selectAllFiles" :checked="isAllSelected"></th>
+                                    <th>名称</th>
+                                    <th width="100">大小</th>
+                                    <th width="160">修改时间</th>
+                                    <th width="80">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-if="fileList.length === 0">
+                                    <td colspan="5" class="empty-text">当前目录为空</td>
+                                </tr>
+                                <tr v-for="file in fileList" :key="file.name">
+                                    <td><input type="checkbox" :value="file.name" v-model="selectedFiles"></td>
+                                    <td class="file-name-cell" @click="file.is_dir ? navigateDir(file.name) : null" :class="{ 'is-dir': file.is_dir }">
+                                        <i class="ri-folder-3-fill" style="color: #fbbf24;" v-if="file.is_dir"></i>
+                                        <i class="ri-file-text-fill" style="color: #94a3b8;" v-else></i>
+                                        <span class="fname">${ file.name }</span>
+                                    </td>
+                                    <td>${ file.is_dir ? '-' : formatSize(file.size) }</td>
+                                    <td>${ file.mtime }</td>
+                                    <td>
+                                        <i class="ri-delete-bin-line text-danger action-icon" @click.stop="deleteSelectedFiles(file.name)"></i>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="drainage-notice" style="display: flex;  align-items: flex-end;">
+                        <i class="ri-information-line"></i> 注：文件转存分享时会新增当前页面中的文件。
+                    </div>
+                </div>
+
+                <div class="config-footer" v-show="currentTab !== 'drainage'">
+                    <button type="submit" class="btn-primary" :disabled="loading">
+                        <span v-if="loading"><i class="ri-loader-4-line spin-icon"></i> 保存中...</span>
+                        <span v-else><i class="ri-save-3-line"></i> 保存系统配置</span>
+                    </button>
+                </div>
+            </form>
+            <div class="modal-overlay" v-if="showBaiduModal" v-cloak>
+                <div class="modal-content" style="width: 450px;">
+                    <h3>配置百度网盘 Cookie</h3>
+                    <div class="form-group" style="text-align: left;">
+                        <textarea v-model="rawBaiduCookie" rows="6" placeholder="请在此处粘贴抓取到的完整 Cookie 字符串..."></textarea>
+                        <div class="status-msg" style="color: #f85149; margin-top: 8px; margin-bottom: 0; text-align: left;" v-if="baiduCookieError">${ baiduCookieError }</div>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 20px;">
+                        <button type="button" class="btn-primary" @click="parseAndSaveBaiduCookie">提交解析并保存</button>
+                        <button type="button" class="btn-secondary" @click="closeBaiduModal">取消</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-overlay" v-if="showBaiduDirModal" v-cloak>
+                <div class="modal-content" style="width: 400px; max-height: 80vh; display: flex; flex-direction: column;">
+                    <h3>选择百度网盘目录</h3>
+                    <div v-if="dirModalLoading" style="margin: 20px 0; color: #64748b;">
+                        <i class="ri-loader-4-line spin-icon"></i> 正在读取目录列表...
+                    </div>
+                    <div v-else class="dir-list" style="flex: 1; overflow-y: auto; text-align: left; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 20px; max-height: 300px;">
+                        <div v-if="baiduDirList.length === 0" style="padding: 15px; color: #94a3b8; text-align: center;">根目录暂无文件夹</div>
+                        <div v-for="dir in baiduDirList" :key="dir" @click="selectBaiduDir(dir)" class="dir-item">
+                            <i class="ri-folder-3-fill" style="color: #fbbf24;"></i> ${ dir }
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" @click="closeBaiduDirModal">取消</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-overlay" v-if="showQuarkDirModal" v-cloak>
+                <div class="modal-content" style="width: 400px; max-height: 80vh; display: flex; flex-direction: column;">
+                    <h3>选择夸克网盘目录</h3>
+                    <div v-if="quarkDirModalLoading" style="margin: 20px 0; color: #64748b;">
+                        <i class="ri-loader-4-line spin-icon"></i> 正在读取目录列表...
+                    </div>
+                    <div v-else class="dir-list" style="flex: 1; overflow-y: auto; text-align: left; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 20px; max-height: 300px;">
+                        <div @click="selectQuarkDir({name: '/', id: '0'})" class="dir-item">
+                            <i class="ri-folder-3-fill" style="color: #fbbf24;"></i> / (根目录)
+                        </div>
+                        <div v-for="dir in quarkDirList" :key="dir.id" @click="selectQuarkDir(dir)" class="dir-item">
+                            <i class="ri-folder-3-fill" style="color: #fbbf24;"></i> ${ dir.name }
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" @click="closeQuarkDirModal">取消</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-overlay" v-if="showQuarkCookieModal" v-cloak>
+                <div class="modal-content" style="width: 450px;">
+                    <h3>配置夸克网盘 Cookie</h3>
+                    <div class="form-group" style="text-align: left;">
+                        <textarea v-model="rawQuarkCookie" rows="6" placeholder="请在此处粘贴抓取到的完整 Cookie 字符串..."></textarea>
+                        <div class="status-msg" style="color: #f85149; margin-top: 8px; margin-bottom: 0; text-align: left;" v-if="quarkCookieError">${ quarkCookieError }</div>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 20px;">
+                        <button type="button" class="btn-primary" @click="parseAndSaveQuarkCookie">提交解析并保存</button>
+                        <button type="button" class="btn-secondary" @click="closeQuarkCookieModal">取消</button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-overlay" v-if="showQuarkModal" v-cloak>
+                <div class="modal-content">
+                    <h3>夸克网盘扫码登录</h3>
+                    <div class="qr-wrapper" id="qrcode-container">
+                        <span v-if="quarkModalLoading"><i class="ri-loader-4-line spin-icon"></i> 初始化中...</span>
+                    </div>
+                    <div class="status-msg">${ quarkStatusMsg }</div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-primary" @click="verifyQuarkLogin" :disabled="quarkVerifyDisabled" v-if="!quarkModalLoading">我已完成登录</button>
+                        <button type="button" class="btn-secondary" @click="closeQuarkModal">关闭窗口</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" v-if="showMkdirModal" v-cloak>
+                <div class="modal-content">
+                    <h3>新建文件夹</h3>
+                    <div class="form-group" style="text-align: left;">
+                        <input type="text" v-model="mkdirName" placeholder="请输入文件夹名称">
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-primary" @click="createDrainageFolder">确定</button>
+                        <button type="button" class="btn-secondary" @click="showMkdirModal = false; mkdirName = ''">取消</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" v-if="showTextModal" v-cloak>
+                <div class="modal-content" style="width: 500px;">
+                    <h3>新建引流文本</h3>
+                    <div class="form-group" style="text-align: left;">
+                        <input type="text" v-model="textName" placeholder="文件名称 (如: 加群指引.txt)">
+                        <textarea v-model="textContent" rows="8" placeholder="在此输入文本内容..." style="margin-top: 10px;"></textarea>
+                    </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn-primary" @click="createDrainageText">保存文本</button>
+                        <button type="button" class="btn-secondary" @click="showTextModal = false; textName = ''; textContent = ''">取消</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-overlay" v-if="showUploadModal" v-cloak>
+                <div class="modal-content">
+                    <h3>上传文件</h3>
+                    <div class="form-group" style="text-align: left; margin-top: 20px;">
+                        <input type="file" ref="fileInput" @change="handleFileUpload" accept=".png,.jpg,.jpeg,.gif,.txt,.md,.json" style="border: none; padding: 0;">
+                        <div class="helper-text">支持图片/文本，最大限制 1GB</div>
+                    </div>
+                    <div class="modal-actions" style="margin-top: 25px;">
+                        <button type="button" class="btn-primary" @click="submitDrainageUpload" :disabled="isUploading">
+                            <span v-if="isUploading"><i class="ri-loader-4-line spin-icon"></i> 上传中...</span>
+                            <span v-else>开始上传</span>
+                        </button>
+                        <button type="button" class="btn-secondary" @click="showUploadModal = false; uploadFileObj = null" :disabled="isUploading">取消</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+{% endblock %}
+
+{% block head_extra %}
+<script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+<style>
+    /* 新增模态弹窗样式 */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+    .modal-content { background: #fff; border-radius: 8px; padding: 30px; width: 340px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .modal-content h3 { margin: 0 0 15px 0; font-size: 18px; color: #1e293b; }
+    .qr-wrapper { margin: 20px auto; min-height: 200px; display: flex; justify-content: center; align-items: center; background: #f8fafc; border-radius: 8px; padding: 10px; }
+    .status-msg { font-size: 13px; color: #64748b; margin-bottom: 20px; line-height: 1.5; min-height: 20px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: center; }
+    .status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; margin-left: 10px; }
+    .status-normal { background: #dcfce7; color: #166534; }
+    .status-error { background: #fee2e2; color: #991b1b; }
+    [v-cloak] { display: none; }
+
+    .config-layout {
+        display: flex;
+        min-height: 600px;
+        padding: 0; /* 清除 panel-card 默认 padding */
+        overflow: hidden;
+    }
+
+    /* === 左侧导航 === */
+    .config-sidebar {
+        width: 240px;
+        background: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+        padding: 20px 0;
+        flex-shrink: 0;
+    }
+    .nav-title {
+        font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase;
+        padding: 0 24px; margin-bottom: 10px;
+    }
+    .nav-item {
+        padding: 12px 24px;
+        font-size: 14px; color: #475569;
+        cursor: pointer;
+        display: flex; align-items: center; gap: 10px;
+        border-left: 3px solid transparent;
+        transition: all 0.2s;
+    }
+    .nav-item i { font-size: 18px; color: #94a3b8; }
+    .nav-item:hover { background: #f1f5f9; color: #1e293b; }
+    .nav-item.active { background: white; color: #2563eb; border-left-color: #2563eb; font-weight: 500; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+    .nav-item.active i { color: #2563eb; }
+
+    /* === 右侧内容 === */
+    .config-content {
+        flex: 1;
+        padding: 40px;
+        display: flex; flex-direction: column;
+        background: #fff;
+    }
+
+    .config-header { margin-bottom: 30px; border-bottom: 1px solid #f1f5f9; padding-bottom: 20px; }
+    .config-header h3 { font-size: 20px; color: #1e293b; margin: 0 0 8px 0; }
+    .config-header .desc { color: #64748b; font-size: 14px; margin: 0; }
+
+    /* 表单控件 */
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; color: #334155; margin-bottom: 8px; }
+    .form-group input[type="text"], 
+    .form-group input[type="number"], 
+    .form-group input[type="password"] {
+        width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; box-sizing: border-box; transition: border 0.2s;
+    }
+    .form-group textarea {
+        width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: monospace; resize: vertical; box-sizing: border-box; line-height: 1.4; color: #334155;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: #2563eb; outline: none; }
+    
+    .helper-text { font-size: 12px; color: #94a3b8; margin-top: 6px; }
+    .divider { height: 1px; background: #f1f5f9; margin: 24px 0; }
+    .form-row { display: flex; gap: 20px; }
+    .form-group.half { flex: 1; }
+
+    /* Input with Icon */
+    .input-wrapper { position: relative; }
+    .eye-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8; }
+    
+    /* 底部按钮 */
+    .config-footer { margin-top: auto; padding-top: 30px; border-top: 1px solid #f1f5f9; }
+    
+    .test-area { display: flex; gap: 10px; margin-top: 10px; }
+    .btn-sm { font-size: 12px; padding: 6px 12px; }
+
+    /* 动画 */
+    .fade-in { animation: fadeIn 0.3s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* 引流配置专属样式 */
+    .drainage-container { display: flex; flex-direction: column; height: 100%; }
+    .drainage-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: #f8fafc; padding: 10px 15px; border-radius: 6px; }
+    .breadcrumb { font-size: 14px; font-weight: 500; color: #475569; display: flex; align-items: center; gap: 5px; }
+    .path-item { cursor: pointer; transition: color 0.2s; display: flex; align-items: center; gap: 5px; }
+    .path-item:hover { color: #2563eb; }
+    /* 锁定绝对高度，内部溢出滚动，吸顶表头防穿透 */
+    .file-grid { height: 400px; border: 1px solid #e2e8f0; border-radius: 6px; overflow-y: auto; background: #fff; }
+    .file-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 13px; }
+    .file-table th { background: #f1f5f9; padding: 10px; color: #64748b; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+    .file-table td { padding: 10px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .file-table tr:hover td { background: #f8fafc; }
+    .file-name-cell { display: flex; align-items: center; gap: 8px; font-weight: 500; }
+    .file-name-cell.is-dir { cursor: pointer; color: #2563eb; }
+    .file-name-cell.is-dir:hover { text-decoration: underline; }
+    .file-name-cell i { font-size: 18px; }
+    .empty-text { text-align: center; padding: 40px !important; color: #94a3b8; }
+    .action-icon { cursor: pointer; font-size: 16px; transition: color 0.2s; }
+    .dir-item { padding: 10px 15px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 8px; color: #334155; }
+    .dir-item:hover { background: #f8fafc; color: #2563eb; }
+    .action-icon:hover { color: #ef4444; }
+    .text-danger { color: #ef4444; }
+    .btn-danger { background: #fee2e2; color: #dc2626; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 14px; }
+    .btn-danger:hover { background: #fca5a5; }
+    .drainage-notice { margin-top: 15px; padding: 10px; background: #fffbeb; color: #d97706; border-radius: 6px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+
+    /* 手机适配 */
+    @media (max-width: 768px) {
+        .config-layout { flex-direction: column; }
+        .config-sidebar { width: 100%; display: flex; overflow-x: auto; border-right: none; border-bottom: 1px solid #e2e8f0; padding: 10px; }
+        .nav-title { display: none; }
+        .nav-item { white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; padding: 10px 15px; }
+        .nav-item.active { border-left: none; border-bottom-color: #2563eb; background: none; box-shadow: none; }
+        .config-content { padding: 20px; }
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+<script>
+    const serverConfig = {{ config | tojson }};
+
+    new Vue({
+        el: '#app',
+        delimiters: ['${', '}'],
+        data: {
+            currentTab: sessionStorage.getItem('systemConfigTab') || 'baidu',
+            form: serverConfig,
+            showToken: false,
+            loading: false,
+            showBaiduModal: false,
+            rawBaiduCookie: '',
+            baiduCookieError: '',
+            showBaiduDirModal: false,
+            dirModalLoading: false,
+            baiduDirList: [],
+            currentDirTarget: '',
+            
+            showQuarkDirModal: false,
+            quarkDirModalLoading: false,
+            quarkDirList: [],
+            currentQuarkDirTarget: '',
+
+            showQuarkCookieModal: false,
+            rawQuarkCookie: '',
+            quarkCookieError: '',
+            // 夸克登录相关状态 (已冻结的历史逻辑)
+            showQuarkModal: false,
+            quarkModalLoading: false,
+            quarkStatusMsg: '',
+            currentTaskId: null,
+            qrCodeInstance: null,
+            quarkVerifyDisabled: false,
+            
+            // 引流配置状态
+            currentDrainagePath: '',
+            fileList: [],
+            selectedFiles: [],
+            drainageBreadcrumbs: [{name: '根目录', path: ''}],
+            showMkdirModal: false, mkdirName: '',
+            showTextModal: false, textName: '', textContent: '',
+            showUploadModal: false, uploadFileObj: null, isUploading: false
+        },
+        watch: {
+            // 监听标签切换，一旦切换就保存到 sessionStorage
+            currentTab(newVal) {
+                sessionStorage.setItem('systemConfigTab', newVal);
+            }
+        },
+        computed: {
+            tabTitle() {
+                const map = {
+                    'baidu': '百度网盘配置',
+                    'quark': '夸克网盘配置',
+                    'search': '搜索服务配置',
+                    'network': '任务设置',
+                    'drainage': '引流配置管理'
+                };
+                return map[this.currentTab];
+            },
+            tabDesc() {
+                const map = {
+                    'baidu': '配置百度网盘的 Cookie 凭证，用于资源有效性检测及自动转存。',
+                    'quark': '配置夸克网盘的 Cookie 凭证，用于资源有效性检测及自动转存。',
+                    'search': '配置第三方搜索 API 接口，用于聚合搜索资源。',
+                    'network': '配置系统后台任务调度频率，控制自动更新节奏。',
+                    'drainage': '管理系统级底层引流文件，用于在转存分享时自动打包混入网盘内。'
+                };
+                return map[this.currentTab];
+            },
+            isAllSelected() {
+                return this.fileList.length > 0 && this.selectedFiles.length === this.fileList.length;
+            }
+        },
+        methods: {
+            async saveConfig() {
+                if (!/^[A-Za-z0-9]{4}$/.test(this.form.baidu_extract_code)) {
+                    alert('保存失败：提取码必须为4位英文或数字');
+                    return;
+                }
+                this.loading = true;
+                try {
+                    const res = await fetch('/admin/system-config', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.form)
+                    });
+                    const data = await res.json();
+                    if(data.success) {
+                        // 成功后不再弹窗，直接刷新页面
+                        window.location.reload();
+                    } else {
+                        // 失败时还是保留弹窗提示，方便排查错误
+                        alert('保存失败：' + data.message);
+                    }
+                } catch(e) {
+                    alert('网络请求错误');
+                } finally {
+                    this.loading = false;
+                }
+            },
+            testConnection(type) {
+                alert(`正在测试 ${type} 连通性...\n(此处应调用后端测试接口)`);
+            },
+            openBaiduModal() {
+                this.showBaiduModal = true;
+                this.rawBaiduCookie = '';
+                this.baiduCookieError = '';
+            },
+            closeBaiduModal() {
+                this.showBaiduModal = false;
+            },
+            parseAndSaveBaiduCookie() {
+                this.baiduCookieError = '';
+                if (!this.rawBaiduCookie.trim()) {
+                    this.baiduCookieError = '请输入 Cookie 内容。';
+                    return;
+                }
+                
+                // 正则忽略大小写进行精准键值捕获
+                const getVal = (key) => {
+                    const match = this.rawBaiduCookie.match(new RegExp('(^|;\\s*)(' + key + ')=([^;]*)', 'i'));
+                    return match ? match[3].trim() : null;
+                };
+
+                const bduss = getVal('BDUSS');
+                const bduss_bfess = getVal('BDUSS_BFESS');
+                const stoken = getVal('STOKEN');
+
+                let missing = [];
+                if (!bduss) missing.push('BDUSS');
+                if (!bduss_bfess) missing.push('BDUSS_BFESS');
+                if (!stoken) missing.push('STOKEN');
+
+                if (missing.length > 0) {
+                    this.baiduCookieError = '缺少必要参数: ' + missing.join(', ') + '，请重新获取。';
+                    return;
+                }
+
+                // 注入表单模型
+                this.form.baidu_bduss = bduss;
+                this.form.baidu_bduss_bfess = bduss_bfess;
+                this.form.baidu_stoken = stoken;
+                
+                this.closeBaiduModal();
+                
+               // 利用已有的 saveConfig 触发提交入库逻辑
+                this.saveConfig();
+            },
+            async openBaiduDirModal(target) {
+                this.currentDirTarget = target;
+                this.showBaiduDirModal = true;
+                this.dirModalLoading = true;
+                this.baiduDirList = [];
+                try {
+                    const res = await fetch('/admin/api/baidu/directories');
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        this.baiduDirList = data.data;
+                    } else {
+                        alert(data.msg);
+                        this.showBaiduDirModal = false;
+                    }
+                } catch (e) {
+                    alert('网络请求错误');
+                    this.showBaiduDirModal = false;
+                } finally {
+                    this.dirModalLoading = false;
+                }
+            },
+            closeBaiduDirModal() {
+                this.showBaiduDirModal = false;
+                this.baiduDirList = [];
+                this.currentDirTarget = '';
+            },
+            selectBaiduDir(dir) {
+                const path = dir.endsWith('/') ? dir : dir + '/';
+                if (this.currentDirTarget === 'save') {
+                    this.form.baidu_save_path = path;
+                } else if (this.currentDirTarget === 'daily') {
+                    this.form.baidu_daily_path = path;
+                }
+                this.closeBaiduDirModal();
+            },
+            async openQuarkDirModal(target) {
+                this.currentQuarkDirTarget = target;
+                this.showQuarkDirModal = true;
+                this.quarkDirModalLoading = true;
+                this.quarkDirList = [];
+                try {
+                    const res = await fetch('/admin/api/quark/directories');
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        this.quarkDirList = data.data;
+                    } else {
+                        alert(data.msg);
+                        this.showQuarkDirModal = false;
+                    }
+                } catch (e) {
+                    alert('网络请求错误');
+                    this.showQuarkDirModal = false;
+                } finally {
+                    this.quarkDirModalLoading = false;
+                }
+            },
+            closeQuarkDirModal() {
+                this.showQuarkDirModal = false;
+                this.quarkDirList = [];
+                this.currentQuarkDirTarget = '';
+            },
+            selectQuarkDir(dir) {
+                if (this.currentQuarkDirTarget === 'save') {
+                    this.form.quark_save_dir_name = dir.name;
+                    this.form.quark_save_dir_id = dir.id;
+                } else if (this.currentQuarkDirTarget === 'daily') {
+                    this.form.quark_daily_dir_name = dir.name;
+                    this.form.quark_daily_dir_id = dir.id;
+                }
+                this.closeQuarkDirModal();
+            },
+            openQuarkCookieModal() {
+                this.showQuarkCookieModal = true;
+                this.rawQuarkCookie = '';
+                this.quarkCookieError = '';
+            },
+            closeQuarkCookieModal() {
+                this.showQuarkCookieModal = false;
+            },
+            parseAndSaveQuarkCookie() {
+                this.quarkCookieError = '';
+                if (!this.rawQuarkCookie.trim()) {
+                    this.quarkCookieError = '请输入 Cookie 内容。';
+                    return;
+                }
+                
+                const getVal = (key) => {
+                    const match = this.rawQuarkCookie.match(new RegExp('(^|;\\s*)(' + key + ')=([^;]*)', 'i'));
+                    return match ? match[3].trim() : null;
+                };
+
+                const bUserId = getVal('b-user-id');
+                const upA4a = getVal('_UP_A4A_11_');
+                const puus = getVal('__puus');
+
+                let missing = [];
+                if (!bUserId) missing.push('b-user-id');
+                if (!upA4a) missing.push('_UP_A4A_11_');
+                if (!puus) missing.push('__puus');
+
+                if (missing.length > 0) {
+                    this.quarkCookieError = '缺少必要参数: ' + missing.join(', ') + '，请重新获取。';
+                    return;
+                }
+
+                this.form.quark_cookie = this.rawQuarkCookie.trim();
+                this.closeQuarkCookieModal();
+                this.saveConfig();
+            },
+            async startQuarkLogin() {
+                this.showQuarkModal = true;
+                this.quarkModalLoading = true;
+                this.quarkStatusMsg = "正在启动底层防护进程...";
+                this.quarkVerifyDisabled = false;
+                
+                if (this.qrCodeInstance) {
+                    document.getElementById('qrcode-container').innerHTML = '';
+                    this.qrCodeInstance = null;
+                }
+
+                try {
+                    const res = await fetch('/admin/start_quark_login', { method: 'POST' });
+                    const data = await res.json();
+                    
+                    if (data.code === 0) {
+                        this.currentTaskId = data.task_id;
+                        this.quarkModalLoading = false;
+                        this.quarkStatusMsg = "请使用手机版夸克浏览器扫描上方二维码";
+                        this.$nextTick(() => {
+                            this.qrCodeInstance = new QRCode(document.getElementById('qrcode-container'), {
+                                text: data.url, width: 180, height: 180,
+                                colorDark: "#0f172a", colorLight: "#f8fafc", correctLevel: QRCode.CorrectLevel.L
+                            });
+                        });
+                    } else if (data.code === 2) {
+                        this.quarkModalLoading = false;
+                        this.quarkStatusMsg = "检测到本地缓存有效，已拦截二维码。";
+                        this.currentTaskId = data.task_id;
+                        this.verifyQuarkLogin();
+                    } else {
+                        this.quarkModalLoading = false;
+                        this.quarkStatusMsg = "调用异常: " + data.msg;
+                    }
+                } catch (err) {
+                    this.quarkModalLoading = false;
+                    this.quarkStatusMsg = "通信失败，请检查网络。";
+                }
+            },
+            async verifyQuarkLogin() {
+                if (!this.currentTaskId) return;
+                
+                this.quarkVerifyDisabled = true;
+                this.quarkStatusMsg = "正在校验登录结果与状态入库...";
+                
+                try {
+                    const res = await fetch('/admin/verify_quark_login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ task_id: this.currentTaskId })
+                    });
+                    const data = await res.json();
+                    
+                    if (data.code === 0) {
+                        this.quarkStatusMsg = "校验成功，凭证已入库，页面即将刷新...";
+                        setTimeout(() => window.location.reload(), 1500);
+                    } else if (data.code === 1) {
+                        this.quarkStatusMsg = "尚未检测到成功回调，请确认已在手机端授权。";
+                        this.quarkVerifyDisabled = false;
+                    } else {
+                        this.quarkStatusMsg = "校验失败: " + data.msg;
+                        this.quarkVerifyDisabled = false;
+                    }
+                } catch (err) {
+                    this.quarkStatusMsg = "校验请求发送失败。";
+                    this.quarkVerifyDisabled = false;
+                }
+            },
+            closeQuarkModal() {
+                this.showQuarkModal = false;
+                this.currentTaskId = null;
+                if (this.qrCodeInstance) {
+                    document.getElementById('qrcode-container').innerHTML = '';
+                    this.qrCodeInstance = null;
+                }
+            },
+            
+            // ======== 引流配置相关方法 ========
+            switchTab(tab) {
+                this.currentTab = tab;
+                if (tab === 'drainage' && this.fileList.length === 0) {
+                    this.fetchFileList();
+                }
+            },
+            async fetchFileList() {
+                try {
+                    const res = await fetch(`/admin/api/drainage/list?path=${encodeURIComponent(this.currentDrainagePath)}`);
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        this.fileList = data.data;
+                        this.selectedFiles = [];
+                    } else alert(data.msg);
+                } catch (e) { console.error('获取列表失败', e); }
+            },
+            navigateDir(folderName) {
+                const newPath = this.currentDrainagePath ? `${this.currentDrainagePath}/${folderName}` : folderName;
+                this.currentDrainagePath = newPath;
+                this.drainageBreadcrumbs.push({ name: folderName, path: newPath });
+                this.fetchFileList();
+            },
+            navigateBreadcrumb(index) {
+                const target = this.drainageBreadcrumbs[index];
+                this.drainageBreadcrumbs = this.drainageBreadcrumbs.slice(0, index + 1);
+                this.currentDrainagePath = target.path;
+                this.fetchFileList();
+            },
+            formatSize(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            },
+            selectAllFiles(e) {
+                if (e.target.checked) this.selectedFiles = this.fileList.map(f => f.name);
+                else this.selectedFiles = [];
+            },
+            async createDrainageFolder() {
+                if (!this.mkdirName.trim()) return;
+                try {
+                    const res = await fetch('/admin/api/drainage/mkdir', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: this.currentDrainagePath, name: this.mkdirName })
+                    });
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        this.showMkdirModal = false;
+                        this.mkdirName = '';
+                        this.fetchFileList();
+                    } else alert(data.msg);
+                } catch(e) { alert('请求失败'); }
+            },
+            async createDrainageText() {
+                if (!this.textName.trim()) return;
+                try {
+                    const res = await fetch('/admin/api/drainage/create_text', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: this.currentDrainagePath, name: this.textName, content: this.textContent })
+                    });
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        this.showTextModal = false;
+                        this.textName = ''; this.textContent = '';
+                        this.fetchFileList();
+                    } else alert(data.msg);
+                } catch(e) { alert('请求失败'); }
+            },
+            handleFileUpload(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (file.size > 1024 * 1024 * 1024) {
+                    alert('文件超过 1GB 上限，拒收');
+                    this.$refs.fileInput.value = '';
+                    return;
+                }
+                this.uploadFileObj = file;
+            },
+            async submitDrainageUpload() {
+                if (!this.uploadFileObj) return alert('请选择文件');
+                this.isUploading = true;
+                const formData = new FormData();
+                formData.append('path', this.currentDrainagePath);
+                formData.append('file', this.uploadFileObj);
+                try {
+                    const res = await fetch('/admin/api/drainage/upload', {
+                        method: 'POST', body: formData
+                    });
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        this.showUploadModal = false;
+                        this.uploadFileObj = null;
+                        this.fetchFileList();
+                    } else alert(data.msg);
+                } catch(e) { alert('上传失败'); }
+                finally { this.isUploading = false; }
+            },
+            async deleteSelectedFiles(singleName) {
+                const targets = singleName ? [singleName] : this.selectedFiles;
+                if (!targets.length) return;
+                if (!confirm(`确认物理删除选中的 ${targets.length} 个项？操作不可逆！`)) return;
+                
+                try {
+                    const res = await fetch('/admin/api/drainage/delete', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: this.currentDrainagePath, names: targets })
+                    });
+                    const data = await res.json();
+                    if (data.code === 200) {
+                        this.fetchFileList();
+                    } else alert(data.msg);
+                } catch(e) { alert('删除失败'); }
+            }
+        },
+        mounted() {
+            if (this.currentTab === 'drainage') {
+                this.fetchFileList();
+            }
+        }
+    });
+</script>
+{% endblock %}

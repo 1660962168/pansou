@@ -1,0 +1,499 @@
+{% extends 'index_base.html' %}
+
+{% block title %}{{ site_config.site_name }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/daily-update.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/DramaList.css') }}">
+<style>
+  [v-cloak] {
+    display: none !important;
+  }
+
+  .loading-box {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+    font-size: 14px;
+  }
+
+  .disabled-item {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(100%);
+    transition: all 0.3s;
+  }
+
+  .global-loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.6);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(2px);
+  }
+
+  .global-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e2e8f0;
+    border-top: 4px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 12px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @media (max-width: 768px) {
+    .pc-link-toggle .toggle-link-btn { display: none !important; }
+    .pc-link-toggle .pc-link-content { display: block !important; }
+  }
+
+  .text-cover {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #4A90E2, #50E3C2);
+    color: white;
+    font-size: 48px;
+    font-weight: bold;
+    border-radius: 8px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="drama-app-wrapper" v-pre>
+  <div id="drama-app"></div>
+</div>
+
+<script type="text/x-template" id="drama-template">
+  <div>
+    <div class="global-loading-overlay" v-if="globalLoading">
+        <div class="global-spinner"></div>
+        <div style="color: #3b82f6; font-size: 14px; font-weight: 600;">资源处理中，请稍候...</div>
+    </div>
+    <div class="daily-layout">
+        <div class="daily-main">
+            <div class="daily-search-wrapper">
+                <div class="daily-search-box">
+                    <input type="text" placeholder="搜索短剧名称..." v-model="keyword" @keyup.enter="doSearch(false)">
+                    <button @click="doSearch(false)" :disabled="isLoading">
+                        [[ isLoading ? '搜索中...' : '搜索' ]]
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div data-v-05c30ea3="" class="stats-bar" v-if="!isLoading && hasSearched"> 
+        已展示 <span data-v-05c30ea3="" class="count-num">[[ results.length ]]</span> 部相关短剧 
+    </div>
+    
+    <div data-v-05c30ea3="" class="result-container">
+        <div data-v-05c30ea3="" class="drama-item" v-for="(item, index) in results" :key="item.id || index" :class="{ 'disabled-item': disabledItems.includes(item.id) }">
+            <div data-v-05c30ea3="" class="drama-cover">
+                <div data-v-05c30ea3="" class="text-cover">[[ getFirstChar(item.title) ]]</div>
+            </div>
+            
+            <div data-v-05c30ea3="" class="drama-info">
+                <div data-v-05c30ea3="" class="drama-title" :title="item.title">[[ item.title ]]</div>
+            </div>
+            
+            <div data-v-05c30ea3="" class="drama-actions">
+                <a data-v-05c30ea3="" v-if="item.quark_link" href="javascript:;" @click="decryptLink(item, 'quark_link')" class="item-btn btn-quark">
+                    <img data-v-05c30ea3="" src="{{ url_for('static', filename='images/quark.svg') }}" alt="夸克" class="btn-icon">
+                </a>
+                <a data-v-05c30ea3="" v-if="item.baidu_link" href="javascript:;" @click="decryptLink(item, 'baidu_link')" class="item-btn btn-baidu">
+                    <img data-v-05c30ea3="" src="{{ url_for('static', filename='images/baidu.svg') }}" alt="百度" class="btn-icon">
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading-box" v-if="isLoading">本地库检索中，请稍候...</div>
+    <div class="loading-box" v-if="isLoadingMore">正在加载更多数据...</div>
+    <div class="loading-box" v-if="!hasMore && results.length > 0">- 到底了，没有更多内容 -</div>
+    <div class="loading-box" v-if="!isLoading && hasSearched && results.length === 0">本地库暂无对应短剧资源</div>
+    
+    <div class="bottom-search-btn-wrapper" style="width: 70%; margin: 0 auto;" >
+      <div class="bottom-hint-text">结果不满意？试试全网搜，覆盖更全</div> 
+      <button class="full-search-btn" @click="goToSearch">全网搜「更多资源」</button>
+    </div>
+    
+    <div data-v-60306d9f="" data-v-f8509e42="" class="dialog-overlay" v-if="dialog_overlay" style="z-index: 9999;">
+        <div data-v-60306d9f="" class="dialog-box">
+            <button data-v-60306d9f="" class="close-btn" @click="dialog_overlay = false">
+                <svg data-v-60306d9f="" viewBox="0 0 24 24" width="20" height="20">
+                    <path data-v-60306d9f="" fill="currentColor" d="M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z"></path>
+                </svg>
+            </button>
+            <div data-v-60306d9f="" class="dialog-content">
+                <div data-v-60306d9f="" class="qrcode-section">
+                    <div data-v-60306d9f="" class="qrcode-title"> 用<span data-v-60306d9f="">[[ dialogTitle ]]</span></div>
+                    <div data-v-60306d9f="" class="qrcode-tips">[[ dialogTips ]]</div>
+                    
+                    <div data-v-60306d9f="" class="qrcode-box" id="dialog-qrcode" ></div>
+
+                    <div data-v-60306d9f="" class="pwd-hint" v-if="showPwdHint">
+                        提取码：<strong data-v-60306d9f="">[[ dialogPwd ]]</strong>
+                    </div>
+                </div>
+
+                <div data-v-025ecf0a="" class="countdown-warning"><div data-v-025ecf0a="" class="countdown-icon">⏰</div><div data-v-025ecf0a="" class="countdown-content"><div data-v-025ecf0a="" class="countdown-title">链接将在 <span data-v-025ecf0a="" class="countdown-time">[[ countdownText ]]</span> 后失效</div><div data-v-025ecf0a="" class="countdown-subtitle">请立即保存到你的网盘，否则无法使用！</div></div></div>
+                <div data-v-025ecf0a="" class="usage-tips">
+                    <div data-v-025ecf0a="" class="tip-item tip-red"><span data-v-025ecf0a="" class="tip-icon">⚠️</span><span data-v-025ecf0a="" class="tip-text"><strong data-v-025ecf0a="">重要：必须先点【保存到我的网盘】按钮</strong></span></div>
+                    <div data-v-025ecf0a="" class="tip-item tip-orange"><span data-v-025ecf0a="" class="tip-icon">✅</span><span data-v-025ecf0a="" class="tip-text">保存成功后，再从你的网盘APP里下载文件</span></div>
+                    <div data-v-025ecf0a="" class="tip-item tip-yellow" v-if="showYellowTip"><span data-v-025ecf0a="" class="tip-icon">💡</span><span data-v-025ecf0a="" class="tip-text">夸克和谐快，如果全部和谐建议切换百度盘</span></div>
+                </div>
+
+                <div data-v-60306d9f="" class="resource-nav">
+                    <div data-v-60306d9f="" class="nav-item resource-title"><span data-v-60306d9f="" class="label">[[ dialogResourceTitle ]]</span></div>
+                    <div data-v-60306d9f="" class="pc-link-toggle">
+                        <button data-v-60306d9f="" class="toggle-link-btn" @click="showPcLink = !showPcLink">
+                            <span data-v-60306d9f="" class="toggle-arrow" :class="{ expanded: showPcLink }">›</span>
+                            <span data-v-60306d9f="">电脑上不方便扫码？点这里复制链接</span>
+                        </button>
+                        <div data-v-60306d9f="" class="pc-link-content" v-show="showPcLink">
+                            <div data-v-60306d9f="" class="link-wrapper">
+                                <a data-v-60306d9f="" :href="fullDialogLink" target="_blank" rel="noopener noreferrer" class="resource-link">[[ fullDialogLink ]]</a>
+                                <div data-v-60306d9f="" class="btn-group">
+                                    <button data-v-60306d9f="" class="action-btn copy-btn" @click="copyToClipboard(fullDialogLink)">
+                                        <svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16">
+                                            <path data-v-60306d9f="" fill="currentColor" d="M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z"></path>
+                                        </svg>
+                                        <span data-v-60306d9f="">复制链接</span>
+                                    </button>
+                                    <a data-v-60306d9f="" class="action-btn open-btn" href="javascript:;" @click="openNetdiskLink">
+                                        <svg data-v-60306d9f="" viewBox="0 0 24 24" width="16" height="16">
+                                            <path data-v-60306d9f="" fill="currentColor" d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z"></path>
+                                        </svg><span data-v-60306d9f="">打开</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div data-v-60306d9f="" class="group-tip" @click="openBanner">
+                <span data-v-60306d9f="" class="group-tip-text">觉得好用？进群获取更多独家资源</span><span data-v-60306d9f="" class="group-tip-arrow">›</span>
+            </div>
+            <div data-v-60306d9f="" class="statement">
+                <div data-v-60306d9f="" class="statement-content">
+                    <p data-v-60306d9f="">本站链接自动收集自公开网盘，不存储不传播任何文件。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="banner-qr-overlay" v-show="showBanner" style="z-index: 10000; display: flex;">
+        <div class="banner-qr-box">
+            <div class="banner-qr-header">
+                <button class="banner-qr-close" @click="showBanner = false">×</button>
+                <h3>扫码进群</h3>
+                <p>失效补链 · 资源求助 · 点映通知</p>
+            </div>
+            <div class="banner-qr-body">
+                <div class="banner-qr-img-wrap" style="min-height: 150px; display: flex; align-items: center; justify-content: center;">
+                    <div id="group-qrcode-local" v-show="systemQrCode"></div>
+                    <div v-if="!systemQrCode" style="color: #999; font-size: 14px;">站长暂未配置群二维码</div>
+                </div>
+                <p class="banner-qr-desc">资源失效补链 · 找不到的帮你找</p>
+                <p class="banner-qr-tip">截图保存 → 微信扫一扫 → 相册识别</p>
+            </div>
+            <div class="banner-qr-footer">
+                <button class="banner-qr-btn" @click="showBanner = false">我知道了</button>
+            </div>
+        </div>
+    </div>
+
+  </div>
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+<script>
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      new Vue({
+        el: "#drama-app",
+        template: "#drama-template",
+        delimiters: ["[[", "]]"],
+        data() {
+          return {
+            keyword: "", 
+            results: [],
+            isLoading: false,
+            isLoadingMore: false,
+            hasSearched: false,
+            offset: 0,
+            limit: 100,
+            hasMore: true,
+            globalLoading: false,
+            disabledItems: [],
+            dialog_overlay: false,
+            dialogTitle: '',
+            dialogTips: '',
+            showPwdHint: false,
+            showYellowTip: false,
+            dialogLink: '',
+            dialogPwd: '',
+            dialogResourceTitle: '',
+            showPcLink: false,
+            showBanner: false,
+            systemQrCode: '{{ system_config.group_qrcode if system_config else "" }}',
+            countdownText: '10:00',
+            countdownSeconds: 600,
+            countdownTimer: null
+          };
+        },
+        computed: {
+          fullDialogLink() {
+            if (!this.dialogLink) return '';
+            return this.dialogPwd ? `${this.dialogLink}?pwd=${this.dialogPwd}` : this.dialogLink;
+          }
+        },
+        watch: {
+          dialog_overlay(newVal) {
+            if (newVal) {
+              this.startCountdown();
+            } else {
+              this.clearCountdown();
+            }
+          }
+        },
+        mounted() {
+          this.doSearch(false);
+          window.addEventListener('scroll', this.handleScroll);
+        },
+        beforeDestroy() {
+          window.removeEventListener('scroll', this.handleScroll);
+        },
+        methods: {
+          startCountdown() {
+            this.clearCountdown();
+            this.countdownSeconds = 600;
+            this.countdownText = '10:00';
+            this.countdownTimer = setInterval(() => {
+              this.countdownSeconds--;
+              if (this.countdownSeconds <= 0) {
+                this.clearCountdown();
+                this.dialog_overlay = false;
+                return;
+              }
+              const m = Math.floor(this.countdownSeconds / 60);
+              const s = this.countdownSeconds % 60;
+              this.countdownText = `${m}:${s.toString().padStart(2, '0')}`;
+            }, 1000);
+          },
+          clearCountdown() {
+            if (this.countdownTimer) {
+              clearInterval(this.countdownTimer);
+              this.countdownTimer = null;
+            }
+          },
+          copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('链接已成功复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败', err);
+                alert('复制失败，请手动选择复制。');
+            });
+          },
+          openNetdiskLink() {
+            if (!this.fullDialogLink) return;
+            const ua = navigator.userAgent.toLowerCase();
+            if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+                alert('请点击右上角选择在【默认浏览器】中打开，以拉起网盘APP。');
+                window.location.href = this.fullDialogLink; 
+            } else {
+                window.open(this.fullDialogLink, '_blank');
+            }
+          },
+          openBanner() {
+            this.dialog_overlay = false; 
+            this.showBanner = true;
+            this.$nextTick(() => {
+                const qrContainer = document.getElementById('group-qrcode-local');
+                if (qrContainer && this.systemQrCode && qrContainer.innerHTML === '') {
+                    new QRCode(qrContainer, {
+                        text: this.systemQrCode,
+                        width: 140,
+                        height: 140,
+                        colorDark: "#000000",
+                        colorLight: "#ffffff",
+                        correctLevel: QRCode.CorrectLevel.L
+                    });
+                }
+            });
+          },
+          goToSearch() {
+            window.open('/search');
+          },
+          cleanTitle(rawTitle) {
+            if (!rawTitle) return "";
+            const separators = ['&', '_', '|'];
+            let result = rawTitle;
+            for (let sep of separators) {
+              if (result.includes(sep)) {
+                let parts = result.split(sep);
+                let pureParts = parts.map(p => p.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ''));
+                let toKeep = [];
+                for (let i = 0; i < parts.length; i++) {
+                  let isRedundant = false;
+                  for (let j = 0; j < parts.length; j++) {
+                    if (i === j) continue;
+                    if (pureParts[i].length > 0 && pureParts[j].includes(pureParts[i])) {
+                      if (pureParts[j].length > pureParts[i].length || (pureParts[j].length === pureParts[i].length && i > j)) {
+                        isRedundant = true;
+                        break;
+                      }
+                    }
+                  }
+                  if (!isRedundant) toKeep.push(parts[i]);
+                }
+                result = toKeep.join(sep);
+              }
+            }
+            return result;
+          },
+          getFirstChar(str) {
+            if (!str) return '剧';
+            const cleanStr = str.replace(/^[《【\[(（\s]+/g, '');
+            return cleanStr ? cleanStr.charAt(0).toUpperCase() : '剧';
+          },
+          formatDate(dateStr) {
+            if (!dateStr || dateStr.includes("0001-01-01")) return '最近更新';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString();
+          },
+          handleScroll() {
+            if (this.isLoading || this.isLoadingMore || !this.hasMore) return;
+            const scrollHeight = document.documentElement.scrollHeight || document.body.scrollHeight;
+            const scrollTop = document.documentElement.scrollTop || document.body.scrollTop;
+            const clientHeight = document.documentElement.clientHeight || window.innerHeight;
+            if (scrollTop + clientHeight >= scrollHeight - 150) {
+              this.doSearch(true);
+            }
+          },
+          async doSearch(isLoadMore = false) {
+            if (!isLoadMore) {
+              this.isLoading = true;
+              this.offset = 0;
+              this.results = [];
+              this.hasMore = true;
+            } else {
+              this.isLoadingMore = true;
+            }
+
+            this.hasSearched = true;
+
+            try {
+              const response = await fetch('/api/external_dramas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  kw: this.keyword.trim(),
+                  limit: this.limit,
+                  offset: this.offset
+                })
+              });
+
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const res = await response.json();
+
+              if (res.code === 200 && res.data) {
+                if (res.data.length < this.limit) {
+                  this.hasMore = false;
+                }
+
+                const cleanedData = res.data.map(item => {
+                  item.title = this.cleanTitle(item.title);
+                  return item;
+                });
+
+                if (isLoadMore) {
+                  this.results = this.results.concat(cleanedData);
+                } else {
+                  this.results = cleanedData;
+                }
+
+                this.offset += res.data.length;
+              }
+            } catch (error) {
+              console.error("本地库搜索请求崩溃:", error);
+            } finally {
+              this.$nextTick(() => {
+                this.isLoading = false;
+                this.isLoadingMore = false;
+              });
+            }
+          },
+          async decryptLink(item, linkType) {
+            const encryptedUrl = item[linkType];
+            if (!encryptedUrl || this.disabledItems.includes(item.id)) return;
+
+            this.globalLoading = true;
+            try {
+              const response = await fetch('/api/decrypt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: encryptedUrl, password: '' })
+              });
+              const res = await response.json();
+              if (res.code === 200) {
+                this.dialogTitle = res.data.type;
+                this.dialogResourceTitle = item.note || item.title || '资源链接';
+                this.dialogLink = res.data.link;
+                this.dialogPwd = res.data.pwd;
+                this.dialogTips = res.data.type === '夸克APP' ? '请保存至网盘后下载' : '打开夸克APP - 搜索框 - 相机图标 - 扫码';
+                this.showYellowTip = res.data.type === '夸克APP';
+                this.showPwdHint = !!res.data.pwd;
+                this.showPcLink = false; 
+                this.dialog_overlay = true;
+                
+                this.$nextTick(() => {
+                    const qrContainer = document.getElementById('dialog-qrcode');
+                    if (qrContainer) {
+                        qrContainer.innerHTML = ''; 
+                        new QRCode(qrContainer, {
+                            text: this.fullDialogLink, 
+                            width: 120,
+                            height: 120,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.L
+                        });
+                    }
+                });
+              } else  {
+                alert("资源失效或错误: " + res.message);
+                this.disabledItems.push(item.id);
+              }
+            } catch (e) {
+              console.error("请求异常:", e);
+            } finally {
+              this.globalLoading = false;
+            }
+          }
+        }
+      });
+    }, 50);
+  });
+</script>
+{% endblock %}

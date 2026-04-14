@@ -1,0 +1,336 @@
+﻿{% extends 'index_base.html' %} {% block title %}{{ site_config.site_name }}{%
+endblock %} {% block head %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/daily-update.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/HotRanking.css') }}"
+/>
+<style>
+  .container {
+    padding: 0;
+  }
+
+  [v-cloak] {
+    display: none !important;
+  }
+
+  .loading-status {
+    text-align: center;
+    padding: 20px;
+    color: #888;
+    font-size: 14px;
+    clear: both;
+  }
+
+.fallback-cover {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    color: #666;
+    font-size: 14px;
+  }
+</style>
+{% endblock %} {% block content %}
+<div id="hot-app-wrapper" v-pre>
+  <div id="hot-app"></div>
+</div>
+<script type="text/x-template" id="hot-template">
+  <div class="hot-wrapper">
+    <div data-v-038c68d3="" class="modal-overlay" v-if="isModalVisible" @click.self="isModalVisible = false">
+      <div data-v-038c68d3="" class="modal-content">
+          <button data-v-038c68d3="" class="modal-close" @click="isModalVisible = false">×</button>
+          <div data-v-038c68d3="" class="modal-header" v-if="currentMovie">
+              <img data-v-038c68d3="" v-if="currentMovie.cover" :src="currentMovie.cover" class="modal-poster" alt="">
+              <div data-v-038c68d3="" v-else class="modal-poster fallback-cover">暂无图片</div>
+              <div data-v-038c68d3="" class="modal-info">
+                  <div data-v-038c68d3="" class="modal-title">[[ currentMovie.title ]]</div>
+                  <div data-v-038c68d3="" class="modal-subtitle">[[ currentMovie.area ]]<template v-if="currentMovie.year && currentMovie.year !== '-'"> · [[ currentMovie.year ]]</template><template v-if="currentMovie.category || filters.cate"> · [[ currentMovie.category || filters.cate ]]</template></div>
+              </div>
+          </div>
+          <div data-v-038c68d3="" class="modal-body" v-if="currentMovie">
+              <div data-v-038c68d3="" class="modal-stats">
+                  <div data-v-038c68d3="" class="modal-stat">
+                      <div data-v-038c68d3="" class="stat-value">#[[ currentMovie.ranking ]]</div>
+                      <div data-v-038c68d3="" class="stat-label">排名</div>
+                  </div>
+                  <div data-v-038c68d3="" class="modal-stat">
+                      <div data-v-038c68d3="" class="stat-value">[[ currentMovie.score || '-' ]]</div>
+                      <div data-v-038c68d3="" class="stat-label">评分</div>
+                  </div>
+                  <div data-v-038c68d3="" class="modal-stat">
+                      <div data-v-038c68d3="" class="stat-value">[[ formatHotScore(currentMovie.hotScore) ]]</div>
+                      <div data-v-038c68d3="" class="stat-label">热度</div>
+                  </div>
+              </div>
+              <!-- <div data-v-038c68d3="" class="modal-section" v-if="currentMovie.actors">
+                  <div data-v-038c68d3="" class="section-title">演员</div>
+                  <div data-v-038c68d3="" class="section-content">[[ currentMovie.actors ]]</div>
+              </div> -->
+              <div data-v-038c68d3="" class="modal-section" v-if="currentMovie.desc">
+                  <div data-v-038c68d3="" class="section-title">简介</div>
+                  <div data-v-038c68d3="" class="section-content">[[ currentMovie.desc ]]</div>
+              </div>
+          </div>
+          <div data-v-038c68d3="" class="modal-footer">
+              <button data-v-038c68d3="" class="modal-btn btn-secondary" @click="copyTitle">复制标题</button>
+              <button data-v-038c68d3="" class="modal-btn btn-primary" @click="searchResource">搜索资源</button>
+          </div>
+      </div>
+    </div>
+  
+    <div class="hot-container">
+        <div data-v-038c68d3="" class="ranking-tip" v-if="showTip">
+            <div data-v-038c68d3="" class="tip-content"><span data-v-038c68d3="" class="tip-text">部分影视可能仍在院线上映，暂无网盘资源</span>
+            </div><button data-v-038c68d3="" class="tip-close" @click="showTip = false">×</button>
+        </div>
+
+        <div data-v-038c68d3="" class="filters-section">
+            <div data-v-038c68d3="" class="filters-inner">
+                <div data-v-038c68d3="" class="channel-tabs">
+                    <button data-v-038c68d3="" class="channel-tab"
+                        v-for="item in config.channels" :key="item"
+                        :class="{ active: filters.channel === item }"
+                        @click="changeFilter('channel', item)">[[ item ]]</button>
+                </div>
+                <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">榜单</span>
+                    <div data-v-038c68d3="" class="filter-scroll">
+                        <span data-v-038c68d3="" class="filter-opt"
+                            v-for="item in config.rankTypes" :key="item"
+                            :class="{ active: filters.rankType === item }"
+                            @click="changeFilter('rankType', item)">[[ item ]]</span>
+                    </div>
+                </div>
+                <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">地区</span>
+                    <div data-v-038c68d3="" class="filter-scroll">
+                        <span data-v-038c68d3="" class="filter-opt"
+                            v-for="item in config.areas" :key="item"
+                            :class="{ active: filters.area === item }"
+                            @click="changeFilter('area', item)">[[ item ]]</span>
+                    </div>
+                </div>
+                <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">年份</span>
+                    <div data-v-038c68d3="" class="filter-scroll">
+                        <span data-v-038c68d3="" class="filter-opt"
+                            v-for="item in config.years" :key="item"
+                            :class="{ active: filters.year === item }"
+                            @click="changeFilter('year', item)">[[ item ]]</span>
+                    </div>
+                </div>
+                <div data-v-038c68d3="" class="filter-row"><span data-v-038c68d3="" class="filter-label">类型</span>
+                    <div data-v-038c68d3="" class="filter-scroll">
+                        <span data-v-038c68d3="" class="filter-opt"
+                            v-for="item in config.cates" :key="item"
+                            :class="{ active: filters.cate === item }"
+                            @click="changeFilter('cate', item)">[[ item ]]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div data-v-038c68d3="" class="content-section">
+            <div data-v-038c68d3="" class="result-header">
+                <h2 data-v-038c68d3="" class="result-title">[[ filters.channel ]] · [[ filters.rankType ]]</h2>
+                <span data-v-038c68d3="" class="result-count">已加载 [[ movieList.length ]] 部</span>
+            </div>
+            <div data-v-038c68d3="" class="movie-grid">
+                <div data-v-038c68d3="" class="movie-card" v-for="(movie, index) in movieList" :key="index" @click="openModal(movie, index)">
+                    <div data-v-038c68d3="" class="poster-wrapper">
+                        <img data-v-038c68d3="" v-if="movie.cover" :src="movie.cover" :alt="movie.title" class="poster" loading="lazy">
+                        <div data-v-038c68d3="" v-else class="poster fallback-cover">暂无图片</div>
+                        <div data-v-038c68d3="" :class="['rank-badge', 'rank-' + (index + 1)]">[[ index + 1 ]]</div>
+                        <div data-v-038c68d3="" class="hot-badge" v-if="movie.hotScore">[[ formatHotScore(movie.hotScore) ]]</div>
+                    </div>
+                    <div data-v-038c68d3="" class="movie-info">
+                        <div data-v-038c68d3="" class="movie-title" :title="movie.title">[[ movie.title ]]</div>
+                        <div data-v-038c68d3="" class="movie-meta">[[ movie.area ]]<template v-if="movie.year && movie.year !== '-'"> · [[ movie.year ]]</template></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading-status" v-if="isLoading">数据加载中...</div>
+            <div class="loading-status" v-if="!hasMore && movieList.length > 0">- 到底了 -</div>
+            <div class="loading-status" v-if="!hasMore && movieList.length === 0">- 暂无数据 -</div>
+        </div>
+    </div>
+  </div>
+</script>
+{% endblock %} {% block scripts %}
+<script>
+  /* * 宏任务延迟注入：
+   * 1. 废弃内部重复引入 vue.js，强制复用 index_base.html 的实例资源。
+   * 2. 利用 load 事件与 setTimeout，将执行时机强行拖延至全局 app 实例完成 DOM 碾压并稳定之后。
+   */
+  window.addEventListener("load", function () {
+    setTimeout(function () {
+      new Vue({
+        el: "#hot-app",
+        template: "#hot-template",
+        delimiters: ["[[", "]]"],
+        data() {
+          return {
+            isModalVisible: false,
+            currentMovie: null,
+            showTip: true,
+            config: {
+              channels: ["电影", "电视剧", "综艺", "动漫"],
+              rankTypes: ["最热", "新片榜", "好评榜"],
+              areas: ["全部", "大陆", "美国", "日本", "韩国", "香港", "台湾", "英国", "法国", "泰国"],
+              years: ["全部", "2026", "2025", "2024", "2023", "2022", "2021", "2020", "2019", "2018", "2017", "2016", "2015", "2014", "2013"],
+              cates: ["全部", "爱情","动画","动作","动作冒险","儿童","犯罪","纪录片","家庭","惊悚","剧情","科幻","科幻奇幻","恐怖","历史","冒险","奇幻","脱口秀","喜剧","悬疑","音乐","战争","战争政治","真人秀"],
+            },
+            apiMap: {
+              category: { "电影": "movie", "电视剧": "tv", "综艺": "variety", "动漫": "anime" },
+              sort: { "最热": "hot", "新片榜": "new", "好评榜": "rating" },
+              country: { "全部": "", "大陆": "CN", "美国": "US", "日本": "JP", "韩国": "KR", "香港": "HK", "台湾": "TW", "英国": "GB", "法国": "FR", "泰国": "TH" }
+            },
+            filters: {
+              channel: "电影",
+              rankType: "最热",
+              area: "全部",
+              year: "全部",
+              cate: "全部",
+            },
+            movieList: [],
+            page: 1,
+            size: 30,
+            isLoading: false,
+            hasMore: true,
+          };
+        },
+        mounted() {
+          this.fetchData();
+          window.addEventListener("scroll", this.handleScroll);
+        },
+        beforeDestroy() {
+          window.removeEventListener("scroll", this.handleScroll);
+        },
+        methods: {
+          copyTitle() {
+            if (!this.currentMovie || !this.currentMovie.title) return;
+            const title = this.currentMovie.title;
+            
+            // 现代浏览器 API
+            if (navigator.clipboard && window.isSecureContext) {
+              navigator.clipboard.writeText(title).then(() => {
+                alert('复制成功: ' + title);
+              }).catch(err => console.error('复制失败:', err));
+            } else {
+              // 降级兼容方案
+              const textArea = document.createElement("textarea");
+              textArea.value = title;
+              textArea.style.position = "fixed";
+              textArea.style.opacity = "0";
+              document.body.appendChild(textArea);
+              textArea.focus();
+              textArea.select();
+              try {
+                document.execCommand('copy');
+                alert('复制成功: ' + title);
+              } catch (err) {
+                console.error('降级复制失败:', err);
+              }
+              document.body.removeChild(textArea);
+            }
+          },
+          searchResource() {
+            if (!this.currentMovie || !this.currentMovie.title) return;
+            const targetUrl = `/search?kw=${encodeURIComponent(this.currentMovie.title)}`;
+            window.open(targetUrl, '_blank');
+          },
+          openModal(movie, index) {
+            this.currentMovie = Object.assign({}, movie, {
+              ranking: index + 1
+            });
+            this.isModalVisible = true;
+          },
+          formatHotScore(score) {
+            if (!score) return "";
+            return Number(score).toString(); // 新热度(rating)为浮点数，直接透传字符串或数字
+          },
+          changeFilter(key, value) {
+            if (this.filters[key] === value) return;
+            this.filters[key] = value;
+            this.page = 1;
+            this.movieList = [];
+            this.hasMore = true;
+            this.fetchData();
+          },
+          async fetchData() {
+            if (this.isLoading || !this.hasMore) return;
+            this.isLoading = true;
+
+            try {
+              const req = {
+                page: this.page,
+                size: this.size,
+                sort: this.apiMap.sort[this.filters.rankType],
+                category: this.apiMap.category[this.filters.channel]
+              };
+
+              const cCode = this.apiMap.country[this.filters.area];
+              if (cCode) req.country = cCode;
+              if (this.filters.year !== "全部") req.year = this.filters.year;
+              if (this.filters.cate !== "全部") req.genre = this.filters.cate;
+
+              const params = new URLSearchParams(req);
+              const response = await fetch(`https://naspt.vip/api/catalog/list?${params.toString()}`);
+              if (!response.ok) throw new Error(`HTTP: ${response.status}`);
+
+              const res = await response.json();
+              if (res.code === 200 && res.data && Array.isArray(res.data.records)) {
+                // 国家编码逆向映射字典
+                const revCountry = Object.fromEntries(Object.entries(this.apiMap.country).map(([k, v]) => [v, k]));
+                
+                const items = res.data.records.map(item => ({
+                  title: item.keyword,
+                  hotScore: item.rating,
+                  score: item.rating,
+                  cover: item.poster ? `https://naspt.vip${item.poster}` : null,
+                  area: revCountry[item.country] || item.country || '未知',
+                  year: item.year || '-',
+                  category: item.genre,
+                  desc: item.overview
+                }));
+
+                this.movieList = this.movieList.concat(items);
+                this.page += 1;
+
+                if (items.length < this.size) {
+                  this.hasMore = false;
+                }
+              } else {
+                this.hasMore = false;
+              }
+            } catch (error) {
+              console.error("Fetch Failed:", error);
+              this.hasMore = false;
+            } finally {
+              this.$nextTick(() => {
+                this.isLoading = false;
+              });
+            }
+          },
+          handleScroll() {
+            if (this.isLoading || !this.hasMore) return;
+            const scrollY =
+              window.scrollY ||
+              window.pageYOffset ||
+              document.documentElement.scrollTop;
+            const windowHeight =
+              window.innerHeight || document.documentElement.clientHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+
+            if (documentHeight - scrollY - windowHeight < 150) {
+              this.fetchData();
+            }
+          },
+        },
+      });
+    }, 50); // 必须留出缓冲帧，避开父级 Vue 的高优渲染队列
+  });
+</script>
+{% endblock %}

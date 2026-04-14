@@ -1,0 +1,66 @@
+{% extends "admin/base.html" %}
+{% block title %}系统维护 - 后台管理{% endblock %}
+{% block page_title %}系统管理 / 系统维护{% endblock %}
+
+{% block content %}
+<div class="content-box" style="background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);  margin: 20px;">
+    
+    <div style="margin-bottom: 24px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 8px;">系统维护状态</label>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="checkbox" id="maintenance_mode" style="width: 18px; height: 18px;" {% if config.maintenance_mode %}checked{% endif %}>
+            <span style="color: {% if config.maintenance_mode %}#ef4444{% else %}#10b981{% endif %}; font-weight: bold;" id="status_text">
+                {% if config.maintenance_mode %}当前处于维护模式 (已拦截前台访问){% else %}正常运行中{% endif %}
+            </span>
+        </div>
+        <div style="color: #64748b; font-size: 13px; margin-top: 6px;">开启后，所有非后台及白名单以外的访问请求都会被指向维护提示页面。</div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+        <label style="display: block; font-weight: bold; margin-bottom: 8px;">IP 白名单</label>
+        <textarea id="maintenance_whitelist" rows="6" style="width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-family: monospace; font-size: 14px; outline: none;" placeholder="例如:&#10;127.0.0.1&#10;192.168.1.100">{{ config.maintenance_whitelist }}</textarea>
+        <div style="color: #64748b; font-size: 13px; margin-top: 6px;">在维护期间允许正常访问的 IP 地址。多 IP 请用换行或英文逗号分隔。</div>
+    </div>
+
+    <button onclick="saveMaintenanceConfig()" style="background-color: #3b82f6; color: #fff; border: none; padding: 10px 24px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: 0.2s;">保存配置</button>
+</div>
+
+<script>
+    // 监听复选框变化以动态更新提示文字
+    document.getElementById('maintenance_mode').addEventListener('change', function(e) {
+        const textSpan = document.getElementById('status_text');
+        if (e.target.checked) {
+            textSpan.textContent = "将要开启维护模式 (保存后生效)";
+            textSpan.style.color = "#ef4444";
+        } else {
+            textSpan.textContent = "正常运行中";
+            textSpan.style.color = "#10b981";
+        }
+    });
+
+    function saveMaintenanceConfig() {
+        const data = {
+            maintenance_mode: document.getElementById('maintenance_mode').checked,
+            maintenance_whitelist: document.getElementById('maintenance_whitelist').value
+        };
+
+        fetch("{{ url_for('admin.system_maintenance') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                alert('配置更新成功！');
+                location.reload();
+            } else {
+                alert('更新失败: ' + res.message);
+            }
+        })
+        .catch(err => {
+            alert('网络或服务错误');
+        });
+    }
+</script>
+{% endblock %}

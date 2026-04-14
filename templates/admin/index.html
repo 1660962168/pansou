@@ -1,0 +1,140 @@
+{% extends "admin/base.html" %}
+
+{% block title %}基德资源站 - 数据统计{% endblock %}
+
+{% block page_title %}仪表盘 / 数据统计{% endblock %}
+
+{% block content %}
+<div class="content-body">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">总资源数</span>
+                <div class="stat-icon bg-blue"><i class="ri-database-2-fill"></i></div>
+            </div>
+            <div class="stat-value">{{ stats.total_resources }}</div>
+            <!-- <div class="stat-change text-up"><i class="ri-arrow-up-line"></i> 较昨日 +124</div> -->
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">今日转存</span>
+                <div class="stat-icon bg-green"><i class="ri-check-double-line"></i></div>
+            </div>
+            <div class="stat-value">{{ stats.today_transfers }}</div>
+            <!-- <div class="stat-change text-up"><i class="ri-arrow-up-line"></i> 自动运行中</div> -->
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">待处理需求</span>
+                <div class="stat-icon bg-orange"><i class="ri-discuss-line"></i></div>
+            </div>
+            <div class="stat-value">{{ stats.pending_requirements }}</div>
+            <!-- <div class="stat-change text-down"><i class="ri-time-line"></i> 需要关注</div> -->
+        </div>
+        <div class="stat-card">
+            <div class="stat-header">
+                <span class="stat-title">系统负载</span>
+                <div class="stat-icon bg-purple"><i class="ri-pulse-line"></i></div>
+            </div>
+            <div class="stat-value">{{ stats.cpu_usage }}%</div>
+            <!-- <div class="stat-change text-up" style="color:#64748b">运行良好</div> -->
+        </div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">每月流量统计</div>
+            <div style="font-size: 13px; color: #64748b;">
+                <span style="display:inline-block; width:10px; height:10px; background:#2563eb; margin-right:5px; border-radius:2px;"></span>本月
+                <span style="display:inline-block; width:10px; height:10px; background:#cbd5e1; margin-right:5px; margin-left:10px; border-radius:2px;"></span>其他月份
+            </div>
+        </div>
+        <div id="monthChart" style="width: 100%; height: 300px;"></div>
+    </div>
+    <div class="panel-card">
+        <div class="panel-header">
+            <div class="panel-title">流量分析 (近7天)</div>
+            <div style="font-size: 13px; color: #64748b;">
+                <span style="display:inline-block; width:10px; height:10px; background:#2563eb; margin-right:5px; border-radius:2px;"></span>今日
+                <span style="display:inline-block; width:10px; height:10px; background:#cbd5e1; margin-right:5px; margin-left:10px; border-radius:2px;"></span>历史
+            </div>
+        </div>
+        <div id="visitChart" style="width: 100%; height: 300px;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- ECharts 图表逻辑 ---
+        
+        // 1. 每月流量图表
+        var monthChart = echarts.init(document.getElementById('monthChart'));
+        var currentMonthIndex = new Date().getMonth(); 
+        var monthsData = {{ stats.month_data | tojson }};
+        
+        var monthColors = monthsData.map((_, index) => {
+            return index === currentMonthIndex ? 
+                { value: _, itemStyle: { color: '#2563eb' } } : 
+                { value: _, itemStyle: { color: '#cbd5e1' } };
+        });
+
+        var monthOption = {
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            grid: { left: '2%', right: '2%', bottom: '3%', top: '10%', containLabel: true },
+            xAxis: [{
+                type: 'category',
+                data: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
+                axisTick: { alignWithLabel: true },
+                axisLine: { lineStyle: { color: '#94a3b8' } }
+            }],
+            yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } }],
+            series: [{
+                name: '月访问量',
+                type: 'bar',
+                barWidth: '50%',
+                data: monthColors,
+                itemStyle: { borderRadius: [4, 4, 0, 0] }
+            }]
+        };
+        monthChart.setOption(monthOption);
+
+        // 2. 每日流量图表
+        var visitChart = echarts.init(document.getElementById('visitChart'));
+        var weekData = {{ stats.week_data | tojson }};
+        // 动态滑动的近7天数据，最后一条（数组末尾）永远是今日
+        var todayIndex = weekData.length - 1;
+        
+        var dayColors = weekData.map((_, index) => {
+            return index === todayIndex ? 
+                { value: _, itemStyle: { color: '#2563eb' } } : 
+                { value: _, itemStyle: { color: '#cbd5e1' } };
+        });
+
+        var visitOption = {
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+            grid: { left: '2%', right: '2%', bottom: '3%', top: '10%', containLabel: true },
+            xAxis: [{
+                type: 'category',
+                data: {{ stats.week_labels | tojson }},
+                axisTick: { alignWithLabel: true },
+                axisLine: { lineStyle: { color: '#94a3b8' } }
+            }],
+            yAxis: [{ type: 'value', splitLine: { lineStyle: { type: 'dashed', color: '#e2e8f0' } } }],
+            series: [{
+                name: '每日访问',
+                type: 'bar',
+                barWidth: '40%',
+                data: dayColors,
+                itemStyle: { borderRadius: [4, 4, 0, 0] }
+            }]
+        };
+        visitChart.setOption(visitOption);
+
+        window.addEventListener('resize', function() {
+            monthChart.resize();
+            visitChart.resize();
+        });
+    });
+</script>
+{% endblock %}

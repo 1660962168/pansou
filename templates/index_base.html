@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ site_config.seo_title }}</title>
+    <meta name="keywords" content="{{ site_config.seo_keywords }}">
+    <meta name="description" content="{{ site_config.seo_description }}">
+    <link rel="icon" href="{{ site_config.favicon_path }}">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/component.css') }}">
+    <style>
+        [v-cloak] {
+            display: none !important;
+        }
+        
+        .banner-qr-overlay {
+            display: flex;
+            /* 保持居中布局 */
+        }
+
+        .top-notice {
+            cursor: pointer;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+
+<body>
+    <div id="app" v-cloak>
+
+        <div class="top-notice" v-if="showNotice" @click="showBanner = true">
+            <span>资源失效/没找到？扫码进群帮你解决 ></span>
+            <div class="close-btn" @click.stop="hideNotice">
+                <i class="ri-close-line"></i>
+            </div>
+        </div>
+
+        <header class="main-header">
+            <div class="header-inner">
+                <div class="logo-area" style="display: flex; align-items: center;">
+                    <img src="{{ site_config.logo_path }}" alt="Logo" style="height: 36px; object-fit: contain;">
+                    <span style="margin-left: 8px;">{{ site_config.site_name }}</span>
+                </div>
+                <nav class="desktop-nav">
+                    <a href="/" class="{{ 'active' if request.path == '/' else '' }}">首页</a>
+                    <a href="/daily-update" class="{{ 'active' if request.path == '/daily-update' else '' }}">每日更新</a>
+                    <a href="/drama" class="{{ 'active' if request.path == '/drama' else '' }}">短剧专区</a>
+                    <a href="/hot" class="{{ 'active' if request.path == '/hot' else '' }}">热门榜单</a>
+                    <a href="#" @click="help = true">求片通道</a>
+                </nav>
+                <div class="mobile-menu-btn" @click="menu = true">
+                    <i class="ri-menu-line"></i>
+                </div>
+            </div>
+        </header>
+
+        <main class="container">
+            {% include 'dialog/dialog-base.html' %}
+
+            {% block content %}{% endblock %}
+        </main>
+
+        <div class="fab-btn" @click="showBanner = true">
+            <i class="ri-qr-code-line" style="font-size: 24px;"></i>
+            <p>扫码进群</p>
+        </div>
+
+        <div class="mobile-tab-bar">
+            <a href="/" class="tab-item {{ 'active' if request.path == '/' else '' }}">
+                <i class="ri-home-5-line"></i><span>首页</span>
+            </a>
+
+            <a href="/daily-update" class="tab-item {{ 'active' if request.path == '/daily-update' else '' }}">
+                <i class="ri-calendar-event-line"></i><span>每日更新</span>
+            </a>
+
+            <a href="/drama" class="tab-item {{ 'active' if request.path == '/drama' else '' }}">
+                <i class="ri-movie-line"></i><span>短剧</span>
+            </a>
+
+            <a href="/hot" class="tab-item {{ 'active' if request.path == '/hot' else '' }}">
+                <i class="ri-fire-line"></i><span>热榜</span>
+            </a>
+        </div>
+
+    </div>
+
+    {% block scripts %}{% endblock %}
+
+    <script src="{{ url_for('static', filename='js/vue.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
+    <script>
+    var app = new Vue({
+        el: "#app",
+        delimiters: ['${', '}'],
+        data() {
+            return {
+                dialogLink: '',
+                dialogPwd: '',
+                dialogResourceTitle: '精选资源',
+                showPcLink: false,
+                // 读取后端注入的安全变量
+                systemQrCode: '{{ system_config.group_qrcode if system_config and system_config.group_qrcode else "" }}',
+                qrLoading: false,
+                qrRendered: false, // 防抖状态锁，禁止重复绘制
+                showBanner: false,
+                showNotice: true,
+                menu: false,
+                help: false, // 控制“提交需求”弹窗是否显示
+                dialog_overlay: false,
+                showTip: true,
+                
+                // --- 弹窗提示相关变量 ---
+                dialogTitle: '夸克APP', // 弹窗标题中的APP名称
+                dialogTips: '打开夸克APP - 搜索框 - 相机图标 - 扫码', // 扫码提示语
+                showPwdHint: false, // 是否显示提取码
+                showYellowTip: true, // 是否显示黄色提示条
+                
+                // --- 提交需求相关变量 ---
+                requirementContent: '', // 存储用户输入的需求内容
+                isSubmitting: false,    // 防止重复提交的防抖状态
+                
+                // --- 全局搜索变量 ---
+                globalKw: ''
+            };
+        },
+        watch: {
+            showBanner(newVal) {
+                // 仅在首次打开时触发渲染，此后永久复用内存中的 Canvas 节点
+                if (newVal && !this.qrRendered && this.systemQrCode) {
+                    this.generateQRCode();
+                }
+            }
+        },
+        computed: {
+            fullDialogLink() {
+                if (!this.dialogLink) return '';
+                return this.dialogPwd ? `${this.dialogLink}?pwd=${this.dialogPwd}` : this.dialogLink;
+            }
+        },
+        methods: {
+            showDirectShareDialog(title, driveName, link, pwd) {
+                if (!link || link === 'None' || link === 'null') {
+                    alert('该资源暂未生成有效的分享链接');
+                    return;
+                }
+
+                this.dialogResourceTitle = title; // 动态注入剧名
+                this.dialogTitle = driveName;
+                this.dialogTips = driveName.includes('夸克') ? '打开夸克APP - 搜索框 - 相机图标 - 扫码' : '打开百度网盘APP - 扫一扫';
+                this.showPwdHint = !!(pwd && pwd !== 'None');
+                this.showYellowTip = driveName.includes('夸克');
+                
+                this.dialogLink = link;
+                this.dialogPwd = (pwd === 'None' || !pwd) ? '' : pwd;
+                this.showPcLink = false;
+                
+                this.dialog_overlay = true;
+                
+                // 确保 DOM 展开后实时挂载二维码
+                this.$nextTick(() => {
+                    const qrContainer = document.getElementById('global-dialog-qrcode');
+                    if (qrContainer) {
+                        qrContainer.innerHTML = ''; 
+                        new QRCode(qrContainer, {
+                            text: this.fullDialogLink, 
+                            width: 120,
+                            height: 120,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.L
+                        });
+                    }
+                });
+            },
+            copyToClipboard(text) {
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('链接已成功复制到剪贴板！');
+                }).catch(err => {
+                    console.error('复制失败', err);
+                    alert('复制失败，请手动选择复制。');
+                });
+            },
+            openNetdiskLink() {
+                if (!this.fullDialogLink) return;
+                const ua = navigator.userAgent.toLowerCase();
+                if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+                    alert('请点击右上角选择在【默认浏览器】中打开，以拉起网盘APP。');
+                    window.location.href = this.fullDialogLink; 
+                } else {
+                    window.open(this.fullDialogLink, '_blank');
+                }
+            },
+            goToSearch() {
+            window.open('/search');
+            },
+            generateQRCode() {
+                this.qrLoading = true;
+                // 必须通过 nextTick 等待弹窗的 DOM 渲染就位，否则找不到 id
+                this.$nextTick(() => {
+                    // 挂起宏任务 300ms 制造过渡动画并让渡主线程
+                    setTimeout(() => {
+                        new QRCode(document.getElementById("group-qrcode"), {
+                            text: this.systemQrCode,
+                            width: 150,
+                            height: 150,
+                            colorDark : "#000000",
+                            colorLight : "#ffffff",
+                            correctLevel : QRCode.CorrectLevel.H
+                        });
+                        this.qrLoading = false;
+                        this.qrRendered = true;
+                    }, 300);
+                });
+            },
+            hideNotice() {
+                this.showNotice = false;
+            },
+            
+            // 点击夸克图标触发
+            ObtainResources_quark() {
+                this.dialogTitle = '夸克APP';
+                this.dialogTips = '打开夸克APP - 搜索框 - 相机图标 - 扫码';
+                this.showPwdHint = false; // 夸克不显示提取码
+                this.showYellowTip = true; // 夸克显示防和谐提示
+                this.dialog_overlay = true; // 打开弹窗
+            },
+            
+            // 点击百度网盘图标触发
+            ObtainResources_baidu() {
+                this.dialogTitle = '百度网盘';
+                this.dialogTips = '打开百度网盘APP - 扫一扫';
+                this.showPwdHint = true; // 百度显示提取码
+                this.showYellowTip = false; // 百度隐藏黄色提示
+                this.dialog_overlay = true; // 打开弹窗
+            },
+            
+            // --- 全局搜索跳转逻辑 ---
+            goSearch(keyword) {
+                const kw = keyword || this.globalKw;
+                if (!kw || !kw.trim()) return;
+                window.location.href = `/search?kw=${encodeURIComponent(kw.trim())}`;
+            },
+
+            // --- 新增：提交需求方法 ---
+            async submitRequirement() {
+                // 1. 简单的表单校验
+                if (!this.requirementContent.trim()) {
+                    alert('需求内容不能为空哦~');
+                    return;
+                }
+                
+                // 2. 开启提交中状态，防止用户连续多次点击
+                this.isSubmitting = true;
+                
+                try {
+                    // 3. 发送 POST 请求到后端 API
+                    const res = await fetch('/api/submit-requirement', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ content: this.requirementContent })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.success) {
+                        alert('提交成功，站长会尽快处理！');
+                        this.requirementContent = ''; // 清空输入框内容
+                        this.help = false;            // 关闭弹窗
+                    } else {
+                        alert('提交失败：' + data.message);
+                    }
+                } catch (error) {
+                    console.error('提交请求失败', error);
+                    alert('网络异常，请稍后再试！');
+                } finally {
+                    // 4. 无论成功失败，恢复按钮状态
+                    this.isSubmitting = false;
+                }
+            }
+        },
+        mounted() {
+            console.log("Vue is running...");
+        },
+    });
+</script>
+</body>
+
+</html>
