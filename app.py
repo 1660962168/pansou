@@ -949,6 +949,7 @@ def get_media_list():
 
 @app.route('/test')
 def test():
+    base_url = 'https://www.seedhub.cc/categories/1/movies/'
     return jsonify({'code': 200, 'data': 'Hello World!'})
 
 if __name__ == '__main__':
