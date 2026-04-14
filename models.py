@@ -60,6 +60,10 @@ class SystemConfig(db.Model):
     maintenance_mode = db.Column(db.Boolean, default=False) # 系统维护开关
     maintenance_whitelist = db.Column(db.Text, default='')  # IP白名单 (多IP支持换行或逗号分隔)
 
+    cos_region = db.Column(db.String(50), nullable=True, comment='COS 区域')
+    cos_secret_id = db.Column(db.String(100), nullable=True, comment='COS SecretId')
+    cos_secret_key = db.Column(db.String(100), nullable=True, comment='COS SecretKey')
+    cos_bucket = db.Column(db.String(100), nullable=True, comment='COS 存储桶名称')
 
     # 请搜索 def to_dict(self): 并将其返回值更新为包含此字段：
     def to_dict(self):

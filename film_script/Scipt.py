@@ -1,138 +1,189 @@
-import json
+# -*- coding=utf-8
 import urllib.parse
 import re
 import time
-import random  # 引入随机数模块，用于生成随机延迟
 from curl_cffi import requests
+import requests as std_requests  # 隔离 curl_cffi，供图片下载专用
 from lxml import html
+from concurrent.futures import ThreadPoolExecutor
+from qcloud_cos import CosConfig
+from qcloud_cos import CosS3Client
+from models import SystemConfig
+import random
 
-# --- 增强版清洗函数 ---
-def clean_data(text, is_date=False):
-    if not text or text == "空":
-        return "" if is_date else []
-    
-    if ":" in text:
-        text = text.split(":", 1)[-1]
-    
-    if is_date:
-        text = re.sub(r'\(.*?\)|（.*?）', '', text)
-        parts = [item.strip() for item in text.split("/") if item.strip()]
-        return parts[0] if parts else ""
-    
-    return [item.strip() for item in text.split("/") if item.strip()]
+# 延迟初始化变量，隔离应用上下文
+_cos_client = None
+_COS_BUCKET = None
 
-
-def run_spider():
-    base_url = 'https://www.seedhub.cc/categories/1/movies/'
-    
-    # --- 步骤 1: 访问列表页 ---
-    print("\n" + "="*50)
-    print("🚀 [1/3] 正在访问列表页...")
-    try:
-        response = requests.get(base_url, impersonate="chrome", timeout=15)
-        tree = html.fromstring(response.content)
-        item_list = tree.xpath('/html/body/div/div/div[3]/div[1]/div/div')
-        
-        if not item_list:
-            print("❌ 没找到数据，请检查 XPath。")
-            return
-            
-        print(f"👉 成功突破！一共找到了 {len(item_list)} 部影视作品。")
-    except Exception as e:
-        print(f"❌ 列表页获取失败: {e}")
-        return
-
-    # 准备一个空列表，用来装所有爬取到的电影数据
-    all_movies_data = []
-
-    # --- 步骤 2: 遍历访问详情页 ---
-    print("\n🚀 [2/3] 开始批量获取详情页数据...")
-    
-    # 使用 enumerate 可以在遍历时知道当前是第几个
-    for index, item in enumerate(item_list, start=1):
-        # 提取列表页的基础信息
-        raw_title = item.xpath('./ul/li[1]/h2/text()')
-        raw_url = item.xpath('./a/@href')
-        raw_rating = item.xpath('./ul/li[4]/a/text()')
-        
-        title = raw_title[0].strip() if raw_title else "未知标题"
-        detail_url = raw_url[0] if raw_url else ""
-        rating = raw_rating[0].strip() if raw_rating else "空"
-        
-        if not detail_url:
-            print(f"⚠️ 第 {index} 个项目没有链接，跳过...")
-            continue
-            
-        full_url = urllib.parse.urljoin(base_url, detail_url)
-        print(f"➤ 正在抓取 ({index}/{len(item_list)}): 【{title}】")
-        
-        detail_headers = {"Referer": base_url}
+def _init_cos():
+    global _cos_client, _COS_BUCKET
+    if _cos_client is None:
         try:
-            # 访问详情页
-            detail_response = requests.get(full_url, impersonate="chrome", headers=detail_headers, timeout=15)
+            sys_config = SystemConfig.query.first()
+            if sys_config and sys_config.cos_secret_id:
+                cos_config = CosConfig(
+                    Region=sys_config.cos_region,
+                    SecretId=sys_config.cos_secret_id,
+                    SecretKey=sys_config.cos_secret_key
+                )
+                _cos_client = CosS3Client(cos_config)
+                _COS_BUCKET = sys_config.cos_bucket
+        except Exception:
+            pass
+
+def clean_release_time(text):
+    """提取合法的年份整数和完整日期，摒弃非法的00-00格式"""
+    if not text or text == "空": return None, None
+    match = re.search(r'(\d{4})(-\d{2}-\d{2})?', text)
+    if not match: return None, None
+    year = int(match.group(1))
+    full_date = f"{year}{match.group(2)}" if match.group(2) else None
+    return year, full_date
+
+def process_cover_image(image_url):
+    """处理封面图：下载并直传 COS。包含重试机制，彻底失败则降级返回原外链"""
+    if not image_url or image_url == "空":
+        return ""
+        
+    filename = image_url.split('/')[-1]
+    cos_key = f"images/{filename}"
+    max_retries = 1
+    
+    # 防御拦截：未配置 COS 时直接降级回传外链
+    if not _cos_client or not _COS_BUCKET:
+        return image_url
+
+    for attempt in range(max_retries + 1):
+        try:
+            res = std_requests.get(image_url, timeout=10)
+            res.raise_for_status()
             
-            if detail_response.status_code != 200:
-                print(f"  ❌ 被拦截或不存在 (状态码 {detail_response.status_code})，跳过...")
+            _cos_client.put_object(
+                Bucket=_COS_BUCKET,
+                Body=res.content,
+                Key=cos_key,
+                ContentType=res.headers.get('Content-Type', 'image/jpeg')
+            )
+            return cos_key  # 成功静默
+        except Exception as e:
+            if attempt == max_retries:
+                print(f"❌ COS 上传失败 [降级保留原图] -> {image_url} | 错误: {e}")
+                return image_url
+            time.sleep(1)
+            
+    return image_url
+def _fetch_detail(task, base_url):
+    # 随机抖动延迟 (0.5 到 1.5 秒)：打破绝对并发带来的瞬间高并发尖峰，伪装成人类点击
+    # time.sleep(random.uniform(0.5, 1))
+    title, raw_url, rating = task
+    full_url = urllib.parse.urljoin(base_url, raw_url)
+    try:
+        res = requests.get(full_url, impersonate="chrome", timeout=15)
+        tree = html.fromstring(res.content)
+
+        def get_text(xpath):
+            nodes = tree.xpath(xpath)
+            return "".join(nodes).strip() if nodes else "空"
+
+        def get_text_by_label(label_name):
+            # 健壮的 XPath 特征锚定提取引擎：无视节点错位滑坡
+            xpath_expr = f'/html/body/div/div/div[3]/div[1]/div[1]/ul/li[contains(text(), "{label_name}")]//text()'
+            nodes = tree.xpath(xpath_expr)
+            if not nodes:
+                return "空"
+            
+            full_text = "".join(nodes).replace('\n', '').strip()
+            
+            # 切除键名(如 "类型: ")，只保留值
+            if ':' in full_text:
+                return full_text.split(':', 1)[-1].strip()
+            elif '：' in full_text:
+                return full_text.split('：', 1)[-1].strip()
+            return full_text.strip()
+
+        # 抛弃绝对位置，动态按名索骥
+        raw_type = get_text_by_label('类型')
+        raw_country = get_text_by_label('制片国家/地区')
+        raw_lang = get_text_by_label('语言')
+        raw_time = get_text_by_label('首播')
+
+        # 结构畸形拦截兜底：全空说明不是标准详情页，直接丢弃
+        if raw_type == "空" and raw_lang == "空" and raw_time == "空":
+            return None
+
+        synopsis = get_text('/html/body/div/div/div[3]/div[1]/p[3]//text()')
+        
+        cover = tree.xpath('/html/body/div/div/div[3]/div[1]/div[1]/img/@src')
+        raw_cover_url = cover[0] if cover else ""
+        final_cover = process_cover_image(raw_cover_url)
+
+        return {
+            "title": title,
+            "score": float(rating) if rating != "空" else 0.0,
+            "source_url": full_url,
+            "cover_url": final_cover,
+            # 注意：因为 get_text_by_label 已经切掉了冒号前缀，这里直接用 "/" 分割即可
+            "categories": [i.strip() for i in raw_type.split("/") if i.strip()],
+            "regions": [i.strip() for i in raw_country.split("/") if i.strip()],
+            "languages": [i.strip() for i in raw_lang.split("/") if i.strip()],
+            "release_year": clean_release_time(raw_time)[0],
+            "release_date": clean_release_time(raw_time)[1],
+            # 剔除导致 MySQL 报错的 4字节 Emoji 字符
+            "description": re.sub(r'[^\u0000-\uFFFF]', '', synopsis.replace('\n', '')).strip() 
+        }
+    except Exception as e:
+        print(f"解析详情页失败: {full_url} - {e}")
+        return None
+
+def run_spider(base_url, existing_urls, start_page=1, end_page=1, max_workers=5):
+    """流式爬虫引擎 (Generator)"""
+    _init_cos()
+    total_pages = abs(end_page - start_page) + 1
+    processed_pages = 0
+    
+    # 倒序翻页
+    for page in range(end_page, start_page - 1, -1):
+        page_url = f"{base_url}?page={page}" if '?' not in base_url else f"{base_url}&page={page}"
+        
+        try:
+            response = requests.get(page_url, impersonate="chrome", timeout=15)
+            tree = html.fromstring(response.content)
+            items = tree.xpath('/html/body/div/div/div[3]/div[1]/div/div')
+        except Exception as e:
+            yield {"status": "error", "page": page, "msg": str(e)}
+            continue
+
+        tasks = []
+        for item in items:
+            raw_url = item.xpath('./a/@href')
+            if not raw_url: continue
+            full_url = urllib.parse.urljoin(base_url, raw_url[0])
+            
+            if full_url in existing_urls:
                 continue
                 
-            detail_tree = html.fromstring(detail_response.content)
-            
-            # 定义提取小帮手
-            def get_raw_text(xpath_rule):
-                nodes = detail_tree.xpath(xpath_rule)
-                return "".join(nodes).strip() if nodes else "空"
+            title = item.xpath('./ul/li[1]/h2/text()')
+            rating = item.xpath('./ul/li[4]/a/text()')
+            tasks.append((title[0].strip() if title else "未知", raw_url[0], rating[0].strip() if rating else "空"))
 
-            # 提取详情
-            cover_img_list = detail_tree.xpath('/html/body/div/div/div[3]/div[1]/div[1]/img/@src')
-            cover_img = cover_img_list[0] if cover_img_list else "空"
-            
-            raw_type = get_raw_text('/html/body/div/div/div[3]/div[1]/div[1]/ul/li[5]//text()')
-            raw_country = get_raw_text('/html/body/div/div/div[3]/div[1]/div[1]/ul/li[6]//text()')
-            raw_language = get_raw_text('/html/body/div/div/div[3]/div[1]/div[1]/ul/li[7]//text()')
-            raw_play_time = get_raw_text('/html/body/div/div/div[3]/div[1]/div[1]/ul/li[8]//text()')
-            raw_synopsis = get_raw_text('/html/body/div/div/div[3]/div[1]/p[3]//text()')
-
-            # 清洗并组装字典
-            final_data = {
-                "标题": title,
-                "评分": rating, 
-                "类型": clean_data(raw_type),
-                "链接": full_url,
-                "封面图": cover_img,
-                "国家地区": clean_data(raw_country),
-                "语言信息": clean_data(raw_language),
-                "首播时间": clean_data(raw_play_time, is_date=True),
-                "内容简介": raw_synopsis.replace('\n', '').replace('\r', '').strip()
-            }
-            
-            # 🌟 把清洗好的单个电影数据，塞进大列表里
-            all_movies_data.append(final_data)
-            print(f"  ✅ 提取成功！")
-            
-        except Exception as e:
-            print(f"  ❌ 请求报错: {e}，跳过...")
-            continue
-            
-        # 🌟 核心防封逻辑：每次请求完，随机休息 1.5 到 3.5 秒
-        if index < len(item_list): # 最后一个爬完就不用休息了
-            sleep_time = random.uniform(1.5, 3.5)
-            print(f"  ⏳ 随机休眠 {sleep_time:.2f} 秒，模拟人类浏览...")
-            time.sleep(sleep_time)
-
-    # --- 步骤 3: 保存至本地 JSON 文件 ---
-    print("\n🚀 [3/3] 所有数据抓取完毕，正在保存至本地...")
-    
-    # 将字典列表写入到 seedhub_data.json 文件中
-    file_name = 'seedhub_data_movies.json'
-    with open(file_name, 'w', encoding='utf-8') as f:
-        # ensure_ascii=False 保证中文正常写入，indent=4 让文件里的代码有整齐的缩进排版
-        json.dump(all_movies_data, f, ensure_ascii=False, indent=4)
+        # 倒序单页列表
+        tasks.reverse()
+        page_results = []
         
-    print("-" * 40)
-    print(f"🎉 大功告成！共成功保存 {len(all_movies_data)} 条数据！")
-    print(f"📁 文件已保存在当前目录下：{file_name}")
-    print("="*50 + "\n")
-
-
-if __name__ == '__main__':
-    run_spider()
+        # 阻塞式线程池执行
+        for t in tasks:
+            res = _fetch_detail(t, base_url)
+            if res: 
+                page_results.append(res)
+                existing_urls.append(res['source_url'])
+        
+        processed_pages += 1
+        
+        # Stream 抛出单页数据
+        yield {
+            "status": "ok",
+            "page": page,
+            "count": len(page_results),
+            "remaining": total_pages - processed_pages,
+            "data": page_results
+        }

@@ -947,9 +947,109 @@ def get_media_list():
         return jsonify({'code': 500, 'msg': str(e)}), 500
 
 
+from film_script.Scipt import run_spider
+from flask import Response, stream_with_context
+import json
+
+
 @app.route('/test')
 def test():
-    return jsonify({'code': 200, 'data': 'Hello World!'})
+    base_url = request.args.get('url', 'https://www.seedhub.cc/categories/1/movies/')
+    start_page = request.args.get('start', 1, type=int)
+    end_page = request.args.get('end', 1109, type=int)
+    
+    media_type = 'movie'
+    if '/categories/2/' in base_url: media_type = 'anime'
+    elif '/categories/3/' in base_url: media_type = 'tv'
+
+    def generate():
+        # 最外层仅捕获致命的系统级崩溃
+        try:
+            existing_urls = [m.link for m in Media.query.with_entities(Media.link).all()]
+            
+            # 调用单线程生成器 (已移除 max_workers 传参)
+            spider_gen = run_spider(base_url, existing_urls, start_page=start_page, end_page=end_page)
+            
+            yield f"data: {json.dumps({'message': f'🔥 爬虫任务启动! 目标: {start_page}页 至 {end_page}页'})}\n\n"
+
+            for payload in spider_gen:
+                if payload["status"] == "error":
+                    err_page = payload["page"]
+                    err_msg = payload["msg"]
+                    yield f"data: {json.dumps({'message': f'⚠️ 第 {err_page} 页列表抓取异常: {err_msg}'})}\n\n"
+                    continue
+                
+                # 核心机制：页级事务隔离舱 (防止单条脏数据摧毁整个爬虫流水线)
+                try:
+                    page_data = payload["data"]
+                    success_count = 0
+                    
+                    for item in page_data:
+                        new_media = Media(
+                            title=item['title'],
+                            score=item['score'],
+                            cover_url=item['cover_url'],
+                            link=item['source_url'],
+                            release_year=item['release_year'],
+                            release_date=item['release_date'],
+                            intro=item['description'],
+                            media_type=media_type
+                        )
+
+                        # set() 防重 + [:30] 物理截断防御
+                        for cat_name in set(item['categories']):
+                            cat_name = cat_name[:30]
+                            if not cat_name: continue
+                            category = Category.query.filter_by(name=cat_name).first()
+                            if not category:
+                                category = Category(name=cat_name)
+                                db.session.add(category)
+                            new_media.categories.append(category)
+
+                        for reg_name in set(item['regions']):
+                            reg_name = reg_name[:30]
+                            if not reg_name: continue
+                            region = Region.query.filter_by(name=reg_name).first()
+                            if not region:
+                                region = Region(name=reg_name)
+                                db.session.add(region)
+                            new_media.regions.append(region)
+
+                        for lang_name in set(item['languages']):
+                            lang_name = lang_name[:30]
+                            if not lang_name: continue
+                            language = Language.query.filter_by(name=lang_name).first()
+                            if not language:
+                                language = Language(name=lang_name)
+                                db.session.add(language)
+                            new_media.languages.append(language)
+
+                        db.session.add(new_media)
+                        success_count += 1
+                    
+                    # 提交当前页的所有数据
+                    db.session.commit()
+                    
+                    progress_msg = f"✅ 完成第 {payload['page']} 页 | 入库 {success_count} 条 | 剩余 {payload['remaining']} 页待处理"
+                    yield f"data: {json.dumps({'message': progress_msg, 'page': payload['page'], 'remaining': payload['remaining']})}\n\n"
+
+                except Exception as db_err:
+                    # 单页回滚：丢弃这一页的脏数据，强行进入下一页，保证流水线永不断开
+                    db.session.rollback()
+                    
+                    # 提前将变量提取出来，避免在 f-string 中使用反斜杠转义
+                    err_page = payload["page"]
+                    err_msg = str(db_err)
+                    
+                    yield f"data: {json.dumps({'message': f'🛑 第 {err_page} 页入库失败(脏数据越界)，已跳过: {err_msg}'})}\n\n"
+                    continue
+
+            yield f"data: {json.dumps({'message': '🎉 所有数据已完成流式入库，爬虫线程回收。'})}\n\n"
+
+        except Exception as core_err:
+            yield f"data: {json.dumps({'message': f'💥 核心进程崩溃: {str(core_err)}'})}\n\n"
+
+    return Response(stream_with_context(generate()), content_type='text/event-stream; charset=utf-8')
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0',port=5000)
+    app.run(host='0.0.0.0', port=5000)
