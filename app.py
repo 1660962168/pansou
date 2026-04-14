@@ -946,5 +946,10 @@ def get_media_list():
     except Exception as e:
         return jsonify({'code': 500, 'msg': str(e)}), 500
 
+
+@app.route('/test')
+def test():
+    return jsonify({'code': 200, 'data': 'Hello World!'})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0',port=5000)
