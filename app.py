@@ -906,6 +906,78 @@ def api_search_local():
 
 
 from flask import request, jsonify
+from sqlalchemy.orm import joinedload
+
+@app.route('/api/media/rank', methods=['GET'])
+def get_media_rank():
+    try:
+        page = request.args.get('page', 1, type=int)
+        size = request.args.get('size', 30, type=int)
+        sort = request.args.get('sort', 'hot')
+        media_type = request.args.get('category')
+        country_code = request.args.get('country')
+        year = request.args.get('year')
+        genre = request.args.get('genre')
+
+        # 挂载预加载器，阻断 N+1 查询风暴
+        query = Media.query.options(joinedload(Media.categories), joinedload(Media.regions))
+
+        if media_type:
+            query = query.filter(Media.media_type == media_type)
+        if year and year != '全部':
+            query = query.filter(Media.release_year == int(year))
+        if genre and genre != '全部':
+            query = query.filter(Media.categories.any(Category.name == genre))
+            
+        # 地区码到中文的本地化映射与“第一国家”严格限定
+        if country_code:
+            region_map = {
+                "CN": "大陆", "US": "美国", "JP": "日本", "KR": "韩国", 
+                "HK": "香港", "TW": "台湾", "GB": "英国", "FR": "法国", "TH": "泰国"
+            }
+            region_name = region_map.get(country_code)
+            if region_name:
+                from sqlalchemy import func
+                from models import media_region, Region
+                
+                # 构建子查询：提取每个影片在关联表中最小的 region_id (等同于内存中的 m.regions[0])
+                first_region_subq = db.session.query(
+                    media_region.c.media_id,
+                    func.min(media_region.c.region_id).label('primary_region_id')
+                ).group_by(media_region.c.media_id).subquery()
+                
+                # 强关联查询：限定当前影片关联的"第一国家"必须匹配传入的名称
+                query = query.join(first_region_subq, Media.id == first_region_subq.c.media_id)\
+                             .join(Region, Region.id == first_region_subq.c.primary_region_id)\
+                             .filter(Region.name.like(f"%{region_name}%"))
+
+        # 动态排序指针
+        if sort == 'new':
+            query = query.order_by(Media.release_year.desc(), Media.id.desc())
+        elif sort == 'rating':
+            query = query.order_by(Media.score.desc(), Media.id.desc())
+        else: # hot 默认回退为主键倒序(最新入库)
+            query = query.order_by(Media.id.desc())
+
+        pagination = query.paginate(page=page, per_page=size, error_out=False)
+
+        # 序列化清洗
+        items = []
+        for m in pagination.items:
+            items.append({
+                'id': m.id,
+                'title': m.title,
+                'score': m.score,
+                'cover_url': f"https://se-1338805106.cos.ap-guangzhou.myqcloud.com/{m.cover_url.lstrip('/')}" if m.cover_url else '',
+                'area': m.regions[0].name if m.regions else '未知',
+                'year': m.release_year or '-',
+                'category': ' '.join([c.name for c in m.categories]) if m.categories else '',
+                'intro': m.intro
+            })
+
+        return jsonify({'code': 200, 'data': {'records': items, 'total': pagination.total}})
+    except Exception as e:
+        return jsonify({'code': 500, 'message': str(e)}), 500
 
 @app.route('/api/media', methods=['GET'])
 def get_media_list():
@@ -954,7 +1026,6 @@ import json
 
 @app.route('/test')
 def test():
-<<<<<<< HEAD
     base_url = request.args.get('url', 'https://www.seedhub.cc/categories/1/movies/')
     start_page = request.args.get('start', 1, type=int)
     end_page = request.args.get('end', 1109, type=int)
@@ -1051,10 +1122,6 @@ def test():
             yield f"data: {json.dumps({'message': f'💥 核心进程崩溃: {str(core_err)}'})}\n\n"
 
     return Response(stream_with_context(generate()), content_type='text/event-stream; charset=utf-8')
-=======
-    base_url = 'https://www.seedhub.cc/categories/1/movies/'
-    return jsonify({'code': 200, 'data': 'Hello World!'})
->>>>>>> a6719932106e5795c79e317b2f19d7fa91ca5194
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
