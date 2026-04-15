@@ -954,6 +954,7 @@ import json
 
 @app.route('/test')
 def test():
+<<<<<<< HEAD
     base_url = request.args.get('url', 'https://www.seedhub.cc/categories/1/movies/')
     start_page = request.args.get('start', 1, type=int)
     end_page = request.args.get('end', 1109, type=int)
@@ -1050,6 +1051,10 @@ def test():
             yield f"data: {json.dumps({'message': f'💥 核心进程崩溃: {str(core_err)}'})}\n\n"
 
     return Response(stream_with_context(generate()), content_type='text/event-stream; charset=utf-8')
+=======
+    base_url = 'https://www.seedhub.cc/categories/1/movies/'
+    return jsonify({'code': 200, 'data': 'Hello World!'})
+>>>>>>> a6719932106e5795c79e317b2f19d7fa91ca5194
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
