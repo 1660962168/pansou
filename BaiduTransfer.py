@@ -19,20 +19,24 @@ class ProxyManager:
     """基于MySQL行锁与10分钟冷却的代理生命周期管理器"""
     def __init__(self):
         self.api_url = "https://kps.kdlapi.com/api/getkps/?secret_id=ol6scirom0vt1kuokv8t&signature=qo1gd2tmj41ajnn4yxh107ygiophv7dn&num=1&sep=1"
-        self.api_url_2 = "https://kps.kdlapi.com/api/getkps/?secret_id=od4j8lx9din0vhszoh6m&signature=nnfq99gzyqgh5uwnnc4mg9dg8yci1kzl&num=1&sep=1"
         self.proxy_user = "bdfishtn"
         self.proxy_pass = "vqz7axpt"
         self.logger = logging.getLogger(__name__)
 
     def _fetch_new_ip(self, level: int = 1) -> str:
-        target_url = self.api_url if level == 1 else self.api_url_2
-        res = requests.get(target_url, timeout=10)
+        # 统一主链路 API 请求
+        res = requests.get(self.api_url, timeout=10)
         res.raise_for_status()
-        ip_port = res.text.strip()
+        # 兼容 \r\n 与 \n 分割边界，剔除潜在空行
+        ip_list = [ip.strip() for ip in re.split(r'\r?\n', res.text.strip()) if ip.strip()]
+        if len(ip_list) < 2:
+            raise ValueError(f"代理API返回节点数量不足2个: {res.text}")
+        # 映射读取架构：level 1 摘取 [0]，level 2 摘取 [1]
+        ip_port = ip_list[0] if level == 1 else ip_list[1]
         if not re.match(r'^\d+\.\d+\.\d+\.\d+:\d+$', ip_port):
             raise ValueError(f"代理API({level})返回异常数据: {ip_port}")
         return ip_port
-
+    
     def get_proxy(self, level: int) -> dict:
         """获取指定层级代理，含10分钟故障冷却与每日00:10跨日比对更新"""
         try:
@@ -327,6 +331,7 @@ class BaiduTransfer:
             }
             response = self._request_with_proxy('POST', 'https://pan.baidu.com/share/transfer', params=transfer_params, cookies=cookies, headers=self._header(referer=f'https://pan.baidu.com/s/{surl_clean}?pwd={pwd}'), data=transfer_data)
             res_json = response.json()
+            print(res_json)
             
             if res_json.get("errno") == 0:
                 list_data = res_json.get("extra", {}).get("list", [{}])

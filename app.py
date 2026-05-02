@@ -24,7 +24,7 @@ from BaiduTransfer import BaiduTransfer
 import re
 import threading
 from quark_client import QuarkClient
-from quark_client.exceptions import APIError, ShareLinkError
+from quark_client.exceptions import APIError, ShareLinkError, AuthenticationError
 from datetime import date
 from apscheduler.executors.pool import ThreadPoolExecutor
 
@@ -483,6 +483,113 @@ def clean_transfer_records(app_instance):
             db.session.rollback()
             logging.info(f"[Scheduler-Error] 清理转存流水异常: {e}")
 
+def daily_spider_task(app_instance):
+    """每日凌晨影视爬虫下探与回溯入库引擎 (已修复查重透传机制)"""
+    from film_script.Scipt import run_spider
+    from models import Media, Category, Region, Language, SpiderLog
+    with app_instance.app_context():
+        logging.info("[Spider] 启动每日凌晨定时爬虫任务...")
+        targets = [
+            ('https://www.seedhub.cc/categories/1/movies/', 'movie'),
+            ('https://www.seedhub.cc/categories/2/movies/', 'anime'),
+            ('https://www.seedhub.cc/categories/3/movies/', 'tv')
+        ]
+        updates = {'movie': 0, 'anime': 0, 'tv': 0}
+        
+        try:
+            # 提取全量链接交由底层查重，阻断重复上传
+            db_links_list = [m.link for m in Media.query.with_entities(Media.link).all()]
+            db_links_set = set(db_links_list)
+            
+            for base_url, media_type in targets:
+                target_page = 1
+                max_page = 30
+                page_data_map = {}
+                
+                # --- 1. 深度探测阶段 ---
+                while target_page <= max_page:
+                    spider_gen = run_spider(base_url, list(db_links_set), start_page=target_page, end_page=target_page)
+                    page_items = []
+                    for payload in spider_gen:
+                        # 核心修复：底层 Scipt.py 吐出的成功状态标识为 "ok" 而非 "success"
+                        if payload.get("status") == "ok":
+                            page_items.extend(payload.get("data", []))
+                            
+                    # 边界命中：如果底层爬虫返回0条新数据，说明该页全被过滤，触达历史数据边界
+                    if not page_items:
+                        break
+                        
+                    page_data_map[target_page] = page_items
+                    target_page += 1
+                    
+                # --- 2. 逆向回溯入库阶段 ---
+                # 倒序遍历（例如 3, 2, 1），确保越新的数据越晚插入，ID越大
+                if page_data_map:
+                    for p in sorted(page_data_map.keys(), reverse=True):
+                        items = page_data_map[p]
+                        success_count = 0
+                        for item in items:
+                            if item['source_url'] in db_links_set:
+                                continue
+                            
+                            new_media = Media(
+                                title=item['title'], score=item['score'], cover_url=item['cover_url'],
+                                link=item['source_url'], release_year=item['release_year'],
+                                release_date=item['release_date'], intro=item['description'], media_type=media_type
+                            )
+
+                            for cat_name in set(item['categories']):
+                                cat_name = cat_name[:30]
+                                if not cat_name: continue
+                                category = Category.query.filter_by(name=cat_name).first()
+                                if not category:
+                                    category = Category(name=cat_name)
+                                    db.session.add(category)
+                                new_media.categories.append(category)
+
+                            for reg_name in set(item['regions']):
+                                reg_name = reg_name[:30]
+                                if not reg_name: continue
+                                region = Region.query.filter_by(name=reg_name).first()
+                                if not region:
+                                    region = Region(name=reg_name)
+                                    db.session.add(region)
+                                new_media.regions.append(region)
+
+                            for lang_name in set(item['languages']):
+                                lang_name = lang_name[:30]
+                                if not lang_name: continue
+                                language = Language.query.filter_by(name=lang_name).first()
+                                if not language:
+                                    language = Language(name=lang_name)
+                                    db.session.add(language)
+                                new_media.languages.append(language)
+
+                            db.session.add(new_media)
+                            db_links_set.add(item['source_url'])
+                            success_count += 1
+                            
+                        db.session.commit()
+                        updates[media_type] += success_count
+                        
+            # --- 3. 日志收尾与清洗 ---
+            today = datetime.now().date()
+            new_log = SpiderLog(update_date=today, movie_count=updates['movie'], anime_count=updates['anime'], tv_count=updates['tv'])
+            db.session.add(new_log)
+            db.session.commit()
+            
+            total_logs = SpiderLog.query.count()
+            if total_logs > 10:
+                old_logs = SpiderLog.query.order_by(SpiderLog.id.asc()).limit(total_logs - 10).all()
+                for old_log in old_logs:
+                    db.session.delete(old_log)
+                db.session.commit()
+                
+            logging.info("[Spider] 爬取入库完成。")
+        except Exception as e:
+            db.session.rollback()
+            logging.error(f"[Spider] 崩溃: {str(e)}")
+
 # 初始化数据库
 # with app.app_context():
 #     db.create_all()
@@ -501,6 +608,7 @@ scheduler = BackgroundScheduler(executors=executors)
 # scheduler.add_job(func=update_naspt_ranking, trigger="cron", hour=2, minute=0, args=[app])
 # scheduler.add_job(func=process_cleanup_tasks, trigger="interval", hours=25, args=[app])
 # scheduler.add_job(func=clean_expired_ips, trigger="cron", hour=0, minute=1, args=[app])
+# scheduler.add_job(func=daily_spider_task, trigger="cron", hour=3, minute=0, args=[app], executor='heavy_io') #影片爬虫
 # # 3. 重度 I/O 任务 -> 强制指定 executor='heavy_io'
 # scheduler.add_job(func=sync_external_drama, trigger="cron", hour=23, minute=0, args=[app], executor='heavy_io')
 # scheduler.add_job(func=check_monitor_links, trigger="interval", minutes=1, args=[app], executor='heavy_io', coalesce=True, max_instances=1, misfire_grace_time=120)
@@ -779,10 +887,12 @@ def api_decrypt():
                 
             except ShareLinkError as e:
                 return jsonify({'code': 400, 'message': f'夸克原链接已失效或错误: {str(e)}'})
+            except AuthenticationError as e:
+                logging.warning(f"[夸克转存-资源可能失效] 链接: {url} | 底层报错: {str(e)}")
+                return jsonify({'code': 400, 'message': '夸克原链接已失效或被和谐（分享已被取消）'})
             except APIError as e:
                 return jsonify({'code': 500, 'message': f'夸克网盘接口报错: {str(e)}'})
             except Exception as e:
-                logging.info(f"[夸克处理崩溃]: {str(e)}")
                 return jsonify({'code': 500, 'message': f'服务端夸克处理异常'})
             
         # 百度转存与分享
@@ -1019,109 +1129,6 @@ def get_media_list():
         return jsonify({'code': 500, 'msg': str(e)}), 500
 
 
-from film_script.Scipt import run_spider
-from flask import Response, stream_with_context
-import json
-
-
-@app.route('/test')
-def test():
-    base_url = request.args.get('url', 'https://www.seedhub.cc/categories/1/movies/')
-    start_page = request.args.get('start', 1, type=int)
-    end_page = request.args.get('end', 1109, type=int)
-    
-    media_type = 'movie'
-    if '/categories/2/' in base_url: media_type = 'anime'
-    elif '/categories/3/' in base_url: media_type = 'tv'
-
-    def generate():
-        # 最外层仅捕获致命的系统级崩溃
-        try:
-            existing_urls = [m.link for m in Media.query.with_entities(Media.link).all()]
-            
-            # 调用单线程生成器 (已移除 max_workers 传参)
-            spider_gen = run_spider(base_url, existing_urls, start_page=start_page, end_page=end_page)
-            
-            yield f"data: {json.dumps({'message': f'🔥 爬虫任务启动! 目标: {start_page}页 至 {end_page}页'})}\n\n"
-
-            for payload in spider_gen:
-                if payload["status"] == "error":
-                    err_page = payload["page"]
-                    err_msg = payload["msg"]
-                    yield f"data: {json.dumps({'message': f'⚠️ 第 {err_page} 页列表抓取异常: {err_msg}'})}\n\n"
-                    continue
-                
-                # 核心机制：页级事务隔离舱 (防止单条脏数据摧毁整个爬虫流水线)
-                try:
-                    page_data = payload["data"]
-                    success_count = 0
-                    
-                    for item in page_data:
-                        new_media = Media(
-                            title=item['title'],
-                            score=item['score'],
-                            cover_url=item['cover_url'],
-                            link=item['source_url'],
-                            release_year=item['release_year'],
-                            release_date=item['release_date'],
-                            intro=item['description'],
-                            media_type=media_type
-                        )
-
-                        # set() 防重 + [:30] 物理截断防御
-                        for cat_name in set(item['categories']):
-                            cat_name = cat_name[:30]
-                            if not cat_name: continue
-                            category = Category.query.filter_by(name=cat_name).first()
-                            if not category:
-                                category = Category(name=cat_name)
-                                db.session.add(category)
-                            new_media.categories.append(category)
-
-                        for reg_name in set(item['regions']):
-                            reg_name = reg_name[:30]
-                            if not reg_name: continue
-                            region = Region.query.filter_by(name=reg_name).first()
-                            if not region:
-                                region = Region(name=reg_name)
-                                db.session.add(region)
-                            new_media.regions.append(region)
-
-                        for lang_name in set(item['languages']):
-                            lang_name = lang_name[:30]
-                            if not lang_name: continue
-                            language = Language.query.filter_by(name=lang_name).first()
-                            if not language:
-                                language = Language(name=lang_name)
-                                db.session.add(language)
-                            new_media.languages.append(language)
-
-                        db.session.add(new_media)
-                        success_count += 1
-                    
-                    # 提交当前页的所有数据
-                    db.session.commit()
-                    
-                    progress_msg = f"✅ 完成第 {payload['page']} 页 | 入库 {success_count} 条 | 剩余 {payload['remaining']} 页待处理"
-                    yield f"data: {json.dumps({'message': progress_msg, 'page': payload['page'], 'remaining': payload['remaining']})}\n\n"
-
-                except Exception as db_err:
-                    # 单页回滚：丢弃这一页的脏数据，强行进入下一页，保证流水线永不断开
-                    db.session.rollback()
-                    
-                    # 提前将变量提取出来，避免在 f-string 中使用反斜杠转义
-                    err_page = payload["page"]
-                    err_msg = str(db_err)
-                    
-                    yield f"data: {json.dumps({'message': f'🛑 第 {err_page} 页入库失败(脏数据越界)，已跳过: {err_msg}'})}\n\n"
-                    continue
-
-            yield f"data: {json.dumps({'message': '🎉 所有数据已完成流式入库，爬虫线程回收。'})}\n\n"
-
-        except Exception as core_err:
-            yield f"data: {json.dumps({'message': f'💥 核心进程崩溃: {str(core_err)}'})}\n\n"
-
-    return Response(stream_with_context(generate()), content_type='text/event-stream; charset=utf-8')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

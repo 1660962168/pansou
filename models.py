@@ -242,6 +242,21 @@ class ProxyNode(db.Model):
     is_failed = db.Column(db.Boolean, default=False)
     last_refresh_time = db.Column(db.DateTime, nullable=False)
 
+class SpiderLog(db.Model):
+    __tablename__ = 'spider_log'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    update_date = db.Column(db.Date, nullable=False, index=True)
+    movie_count = db.Column(db.Integer, default=0)
+    anime_count = db.Column(db.Integer, default=0)
+    tv_count = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'date': self.update_date.strftime('%Y年%m月%d日'),
+            'log_text': f"电影更新了{self.movie_count}个,动漫更新了{self.anime_count}个,电视剧更新了{self.tv_count}个"
+        }
 
 # ================= 影视资源重构模型 =================
 
