@@ -886,8 +886,10 @@ def system_config():
         db.session.commit()
 
     if request.method == 'GET':
-        # GET 请求：将数据库里的配置对象转成字典传给前端页面
-        return render_template('admin/system_config.html', config=config_record.to_dict())
+        from models import SpiderLog
+        logs = SpiderLog.query.order_by(SpiderLog.id.desc()).limit(10).all()
+        spider_logs_data = [log.to_dict() for log in logs]
+        return render_template('admin/system_config.html', config=config_record.to_dict(), spider_logs=spider_logs_data)
     if request.method == 'POST':
         data = request.json
         if not data:
@@ -1311,3 +1313,64 @@ def system_maintenance():
         except Exception as e:
             db.session.rollback()
             return jsonify({'success': False, 'message': f'保存失败: {str(e)}'})
+        
+@bp.route('/wipe_all', methods=['GET'])
+@login_required
+def wipe_all():
+    # ---------------- 核心密码配置 ----------------
+    CUSTOM_WIPE_PASSWORD = "C2RKEKdaMA8MJTEzx45DAjKn6ewrZbvbSwdHknW7" 
+    # ---------------------------------------------
+
+    input_pwd = request.args.get('pwd', '')
+
+    # 命中指令：执行抹除
+    if input_pwd == CUSTOM_WIPE_PASSWORD:
+        try:
+            from sqlalchemy import text
+            # 禁用外键检查以执行 TRUNCATE
+            db.session.execute(text('SET FOREIGN_KEY_CHECKS = 0;'))
+            
+            # 清理关联表与主表
+            tables = ['media_category', 'media_region', 'media_language', 'media']
+            for table in tables:
+                db.session.execute(text(f'TRUNCATE TABLE {table};'))
+            
+            db.session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
+            db.session.commit()
+            
+            logging.warning(f"[SECURITY] 数据抹除指令由管理员 {session.get('admin_id')} 成功触发。")
+            return "STATUS 200: DATA_WIPED_SUCCESSFULLY"
+            
+        except Exception as e:
+            db.session.rollback()
+            db.session.execute(text('SET FOREIGN_KEY_CHECKS = 1;'))
+            return f"INTERNAL_ERROR: {str(e)}"
+
+    # 未命中指令：渲染简易输入面板
+    return '''
+    <!DOCTYPE html>
+    <html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8">
+        <title>核心指令验证</title>
+        <style>
+            body { display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #0f172a; font-family: -apple-system, system-ui; }
+            .panel { background: #1e293b; padding: 30px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; }
+            h2 { color: #f87171; margin-bottom: 20px; font-weight: 500; }
+            input { background: #334155; border: 1px solid #475569; color: #f8fafc; padding: 10px; border-radius: 4px; width: 240px; margin-bottom: 20px; outline: none; }
+            button { background: #dc2626; color: white; border: none; padding: 10px 25px; border-radius: 4px; cursor: pointer; font-weight: 600; transition: 0.2s; }
+            button:hover { background: #b91c1c; }
+        </style>
+    </head>
+    <body>
+        <div class="panel">
+            <h2>物理抹除：确认身份</h2>
+            <form method="GET">
+                <input type="password" name="pwd" placeholder="输入自定义授权码" required autocomplete="off">
+                <br>
+                <button type="submit">执行物理清空</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    '''

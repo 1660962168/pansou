@@ -24,6 +24,9 @@
             <div class="nav-item" :class="{ active: currentTab === 'drainage' }" @click="switchTab('drainage')">
                 <i class="ri-folder-shield-2-line"></i> 引流配置
             </div>
+            <div class="nav-item" :class="{ active: currentTab === 'spider' }" @click="switchTab('spider')">
+    <i class="ri-robot-line"></i> 影片爬取
+</div>
         </div>
 
         <div class="config-content">
@@ -142,6 +145,30 @@
                         <div class="helper-text">用于在前端页面展示引流加群的活码链接。</div>
                     </div>
                 </div>
+                <div v-show="currentTab === 'spider'" class="tab-pane fade-in">
+                    <div class="form-group">
+                        <label>近期爬取日志 (系统仅保留最新 10 条记录)</label>
+                        <div class="file-grid" style="height: 380px;">
+                            <table class="file-table">
+                                <thead>
+                                    <tr>
+                                        <th width="150">日期</th>
+                                        <th>更新详情</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="spiderLogs.length === 0">
+                                        <td colspan="2" class="empty-text">暂无爬取记录</td>
+                                    </tr>
+                                    <tr v-for="log in spiderLogs" :key="log.id">
+                                        <td>${ log.date }</td>
+                                        <td>${ log.log_text }</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
                 <div v-show="currentTab === 'drainage'" class="tab-pane fade-in drainage-container">
                     <div class="drainage-toolbar">
@@ -202,10 +229,10 @@
                     </div>
                 </div>
 
-                <div class="config-footer" v-show="currentTab !== 'drainage'">
+                <div class="config-footer" v-show="currentTab !== 'drainage' && currentTab !== 'spider'">
                     <button type="submit" class="btn-primary" :disabled="loading">
-                        <span v-if="loading"><i class="ri-loader-4-line spin-icon"></i> 保存中...</span>
-                        <span v-else><i class="ri-save-3-line"></i> 保存系统配置</span>
+                    <span v-if="loading"><i class="ri-loader-4-line spin-icon"></i> 保存中...</span>
+                    <span v-else><i class="ri-save-3-line"></i> 保存系统配置</span>
                     </button>
                 </div>
             </form>
@@ -465,6 +492,7 @@
 <script src="{{ url_for('static', filename='js/vue.js') }}"></script>
 <script>
     const serverConfig = {{ config | tojson }};
+    const spiderLogsData = {{ spider_logs | default([]) | tojson }};
 
     new Vue({
         el: '#app',
@@ -472,6 +500,7 @@
         data: {
             currentTab: sessionStorage.getItem('systemConfigTab') || 'baidu',
             form: serverConfig,
+            spiderLogs: spiderLogsData,
             showToken: false,
             loading: false,
             showBaiduModal: false,
@@ -516,6 +545,7 @@
         computed: {
             tabTitle() {
                 const map = {
+                    'spider': '影片入库日志',
                     'baidu': '百度网盘配置',
                     'quark': '夸克网盘配置',
                     'search': '搜索服务配置',

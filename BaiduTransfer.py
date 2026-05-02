@@ -19,20 +19,24 @@ class ProxyManager:
     """基于MySQL行锁与10分钟冷却的代理生命周期管理器"""
     def __init__(self):
         self.api_url = "https://kps.kdlapi.com/api/getkps/?secret_id=ol6scirom0vt1kuokv8t&signature=qo1gd2tmj41ajnn4yxh107ygiophv7dn&num=1&sep=1"
-        self.api_url_2 = "https://kps.kdlapi.com/api/getkps/?secret_id=od4j8lx9din0vhszoh6m&signature=nnfq99gzyqgh5uwnnc4mg9dg8yci1kzl&num=1&sep=1"
         self.proxy_user = "bdfishtn"
         self.proxy_pass = "vqz7axpt"
         self.logger = logging.getLogger(__name__)
 
     def _fetch_new_ip(self, level: int = 1) -> str:
-        target_url = self.api_url if level == 1 else self.api_url_2
-        res = requests.get(target_url, timeout=10)
+        # 统一主链路 API 请求
+        res = requests.get(self.api_url, timeout=10)
         res.raise_for_status()
-        ip_port = res.text.strip()
+        # 兼容 \r\n 与 \n 分割边界，剔除潜在空行
+        ip_list = [ip.strip() for ip in re.split(r'\r?\n', res.text.strip()) if ip.strip()]
+        if len(ip_list) < 2:
+            raise ValueError(f"代理API返回节点数量不足2个: {res.text}")
+        # 映射读取架构：level 1 摘取 [0]，level 2 摘取 [1]
+        ip_port = ip_list[0] if level == 1 else ip_list[1]
         if not re.match(r'^\d+\.\d+\.\d+\.\d+:\d+$', ip_port):
             raise ValueError(f"代理API({level})返回异常数据: {ip_port}")
         return ip_port
-
+    
     def get_proxy(self, level: int) -> dict:
         """获取指定层级代理，含10分钟故障冷却与每日00:10跨日比对更新"""
         try:
@@ -137,6 +141,58 @@ class BaiduTransfer:
         })
         
         self.proxy_manager = ProxyManager()
+
+
+
+    def _poll_task_status(self, task_id, bdstoken, logid):
+        """
+        基于 [229] 规范的转存进度轮询[cite: 3, 4]
+        """
+        url = "https://pan.baidu.com/share/taskquery"
+        params = {
+            "taskid": task_id,
+            "channel": "chunlei",
+            "web": "1",
+            "app_id": "250528",
+            "bdstoken": bdstoken,
+            "logid": logid,
+            "clienttype": "0"
+        }
+        
+        # 剥离代理，强制使用原生 session 发起 GET 请求
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+            "Referer": "https://pan.baidu.com/"
+        }
+
+        # 5秒超时硬限制：0.5秒/次 * 10次 = 5秒
+        max_retries = 10
+        
+        for _ in range(max_retries):
+            resp = self.session.get(url, params=params, headers=headers, timeout=10)
+            
+            try:
+                res_data = resp.json()
+            except Exception:
+                raise RuntimeError("转存任务状态异常：接口未返回合法JSON")
+
+            status = res_data.get("status")
+            
+            # 状态机严格断言
+            if status == "success":
+                try:
+                    return res_data["list"][0]["to_fs_id"]
+                except (KeyError, IndexError):
+                    raise RuntimeError("转存任务数据结构异常：success状态下缺失 to_fs_id")
+            elif status == "running":
+                time.sleep(0.5)
+                continue
+            else:
+                # 包含 failed 或缺失 status 字段的情况，立即熔断
+                raise RuntimeError(f"转存任务状态异常：非预期状态 [{status}]")
+                
+        raise TimeoutError("转存任务超时：超过5秒未返回success")
 
     def _request_with_proxy(self, method: str, url: str, **kwargs) -> requests.Response:
         """全局 HTTP I/O 代理网关拦截器（三级级联降级架构，全局异常兜底）"""
@@ -327,11 +383,28 @@ class BaiduTransfer:
             }
             response = self._request_with_proxy('POST', 'https://pan.baidu.com/share/transfer', params=transfer_params, cookies=cookies, headers=self._header(referer=f'https://pan.baidu.com/s/{surl_clean}?pwd={pwd}'), data=transfer_data)
             res_json = response.json()
+            print(res_json)
             
             if res_json.get("errno") == 0:
+                # 拦截大型文件异步转存场景
+                if res_json.get("show_msg") == "文件转存中" and "task_id" in res_json:
+                    try:
+                        to_fs_id = self._poll_task_status(
+                            task_id=res_json["task_id"],
+                            bdstoken=yun_json.get("bdstoken"),
+                            logid=''  # 承接当前方法上下文中 transfer_params 的设定
+                        )
+                        self.logger.info(f"[Transfer] 异步转存成功。目标ID: {to_fs_id}")
+                        # 构造兼容原生结构的返回值
+                        return {"status": True, "msg": "转存成功", "data": {"to_fs_id": to_fs_id, "to": self.save_path}}
+                    except Exception as e:
+                        self.logger.error(f"[Transfer] 异步转存失败: {str(e)}")
+                        return {"status": False, "msg": f"异步转存失败: {str(e)}", "data": None}
+
+                # 原有同步转存逻辑
                 list_data = res_json.get("extra", {}).get("list", [{}])
                 file_info = list_data[0] if list_data else {}
-                self.logger.info(f"[Transfer] 转存成功。目标ID: {file_info.get('to_fs_id')}")
+                self.logger.info(f"[Transfer] 同步转存成功。目标ID: {file_info.get('to_fs_id')}")
                 return {"status": True, "msg": "转存成功", "data": {"to_fs_id": file_info.get("to_fs_id"), "to": file_info.get("to")}}
             
             self.logger.error(f"[Transfer] 转存上游拒绝。错误码: {res_json.get('errno')} | 返回体: {res_json}")

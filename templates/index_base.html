@@ -63,10 +63,7 @@
             {% block content %}{% endblock %}
         </main>
 
-        <div class="fab-btn" @click="showBanner = true">
-            <i class="ri-qr-code-line" style="font-size: 24px;"></i>
-            <p>扫码进群</p>
-        </div>
+        
 
         <div class="mobile-tab-bar">
             <a href="/" class="tab-item {{ 'active' if request.path == '/' else '' }}">
