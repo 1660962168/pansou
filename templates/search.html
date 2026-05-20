@@ -366,8 +366,9 @@ endblock %} {% block head %}
             </button>
         </div>
     </div>
-
+    
   </div>
+  
 </script>
 {% endblock %} {% block scripts %}
 <script src="{{ url_for('static', filename='js/qrcode.min.js') }}"></script>
@@ -787,5 +788,60 @@ endblock %} {% block head %}
       });
     }, 50);
   });
+</script>
+<!-- 回到顶部 组件 -->
+<button id="back-to-top" aria-label="回到顶部">
+    <i class="ri-arrow-up-line"></i>
+</button>
+
+<script>
+(function() {
+    const topBtn = document.getElementById('back-to-top');
+    const THRESHOLD = 200;
+    const DELAY_MS = 1000;
+    let interactionTimer = null;
+
+    function scrollToTop(e) {
+        // 阻止事件冒泡，避免触发 window 上的 mousedown/touchstart
+        e.stopPropagation(); 
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        // 主动隐藏按钮
+        topBtn.classList.remove('show');
+    }
+
+    function handleInteraction() {
+        // 1. 立即清理存在的计时器
+        if (interactionTimer) {
+            clearTimeout(interactionTimer);
+        }
+        
+        // 2. 无论什么情况，有交互就隐藏按钮
+        topBtn.classList.remove('show');
+
+        // 3. 边界判定：若已滚动到绝对顶部或阈值内，直接退出，不启动计时器
+        if (window.scrollY <= THRESHOLD) {
+            return;
+        }
+
+        // 4. 阈值外，延迟 2 秒后显示
+        interactionTimer = setTimeout(() => {
+            // 二次校验，防止延时期间发生未捕获的位置变更
+            if (window.scrollY > THRESHOLD) {
+                topBtn.classList.add('show');
+            }
+        }, DELAY_MS);
+    }
+
+    // 绑定回顶事件
+    topBtn.addEventListener('click', scrollToTop);
+    topBtn.addEventListener('mousedown', (e) => e.stopPropagation());
+    topBtn.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+
+    // 绑定全局交互事件监听
+    const interactionEvents = ['scroll', 'mousedown', 'touchstart'];
+    interactionEvents.forEach(evt => {
+        window.addEventListener(evt, handleInteraction, { passive: true });
+    });
+})();
 </script>
 {% endblock %}
